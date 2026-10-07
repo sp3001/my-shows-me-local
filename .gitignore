@@ -1,0 +1,58 @@
+# ---------------------------------------------------------------------------
+# User data. This is the point of this file: the repo root holds the user's
+# only copy of their watch history as read-only input, and everything the app
+# produces lands under data/ and log/. A commit containing either is the
+# mistake these lines prevent (ARCHITECTURE.md §4, §7).
+# ---------------------------------------------------------------------------
+data/
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+log/
+
+# IMDb dataset downloads (ARCHITECTURE.md §4 Data:ImdbDatasetPath)
+*.tsv.gz
+*.tsv.bz2
+
+# ---------------------------------------------------------------------------
+# Build output
+# ---------------------------------------------------------------------------
+bin/
+obj/
+artifacts/
+TestResults/
+*.binlog
+MSBuild.log
+
+# ---------------------------------------------------------------------------
+# Tooling / editor / OS
+# ---------------------------------------------------------------------------
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userprefs
+*.DotSettings.user
+[Tt]est[Rr]esult*/
+BenchmarkDotNet.Artifacts/
+*.orig
+*.rej
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+!.gitkeep
+
+# EF Core design-time output
+*.efml
+
+backup/
+cache/
+draft/
+schedule-full.json 

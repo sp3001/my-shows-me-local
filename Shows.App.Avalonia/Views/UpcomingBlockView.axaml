@@ -1,0 +1,28 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Shows.App.Avalonia.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:Class="Shows.App.Avalonia.Views.UpcomingBlockView"
+             x:DataType="vm:UpcomingBlockViewModel">
+
+    <!-- One Upcoming date block (improvement 4 follow-up): an optional caption ("This Week") over its day
+         groups. The "This Week" block is tinted with a NEUTRAL gray (HighlightBrush — no purple, which
+         clashed with the theme); the "Other" block has no caption and no tint, so the two are visually
+         distinct. Days render through the ViewLocator (UpcomingDayViewModel -> UpcomingDayView). -->
+    <Border x:Name="BlockBorder" CornerRadius="10" Padding="10,8" Margin="0,0,0,12">
+        <Border.Styles>
+            <Style Selector="Border.highlight">
+                <Setter Property="Background" Value="{DynamicResource HighlightBrush}" />
+            </Style>
+        </Border.Styles>
+        <StackPanel Spacing="8">
+            <TextBlock Text="{Binding Caption}" FontSize="15" FontWeight="Bold"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       HorizontalAlignment="Right"
+                       IsVisible="{Binding HasCaption}" />
+            <ItemsControl ItemsSource="{Binding Days}" />
+        </StackPanel>
+    </Border>
+</UserControl>

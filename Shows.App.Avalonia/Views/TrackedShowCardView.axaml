@@ -1,0 +1,124 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Shows.App.Avalonia.ViewModels"
+             xmlns:local="using:Shows.App.Avalonia"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:Class="Shows.App.Avalonia.Views.TrackedShowCardView"
+             x:DataType="vm:TrackedShowCardViewModel">
+
+    <!-- A tracked show in a category tab (SPEC F4): poster, title (R3), progress bar + count, the
+         unwatched-specials / needs-review notes (R4), and the inline collapsible seasons. MAUI's
+         BindableLayout maps to an ItemsControl; the nested episode rows are an ItemsControl inside each
+         season. The title and pin are tappable TextBlocks (Avalonia has no TapGestureRecognizer — the
+         code-behind wires PointerPressed to the commands). -->
+    <Border Classes="card" Margin="0,0,0,10">
+        <Grid ColumnDefinitions="60,*" ColumnSpacing="10">
+            <Image Grid.Column="0"
+                   local:ImageBehavior.Url="{Binding PosterUrl}"
+                   IsVisible="{Binding HasPoster}"
+                   Width="60" Height="86" Stretch="UniformToFill" VerticalAlignment="Top" />
+            <Border Grid.Column="0" Classes="poster"
+                    IsVisible="{Binding HasPoster, Converter={StaticResource InvertBool}}"
+                    Width="60" Height="86" VerticalAlignment="Top" />
+
+            <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Top">
+                <!-- Title + status share one line (improvement 3); the title is the tappable link to
+                     details (issue 8), the pin toggle (improvement 18) sits at the far right. -->
+                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                        <TextBlock Classes="link" Text="{Binding PrimaryTitle}" FontSize="15" FontWeight="Bold"
+                                   VerticalAlignment="Center"
+                                   PointerPressed="OnOpenDetails" />
+                        <Border Classes="chip" VerticalAlignment="Center" IsVisible="{Binding StatusText, Converter={StaticResource IsNotNull}}">
+                            <TextBlock Classes="chip" Text="{Binding StatusText}" />
+                        </Border>
+                        <!-- The user's own rating (1-10) as a highlighted chip, next to status. Hidden when unrated. -->
+                        <Border Classes="chip rating" VerticalAlignment="Center" IsVisible="{Binding HasUserRating}">
+                            <TextBlock Classes="chip rating" Text="{Binding UserRatingText, StringFormat='★ {0}'}" />
+                        </Border>
+                    </StackPanel>
+                    <TextBlock Grid.Column="2" Text="{Binding PinText}" FontSize="12"
+                               VerticalAlignment="Center" Padding="6,2" Cursor="Hand"
+                               IsVisible="{Binding CanPin}"
+                               Foreground="{DynamicResource AccentBrush}"
+                               PointerPressed="OnTogglePin" />
+                </Grid>
+                <TextBlock Text="{Binding SecondaryTitle}" Classes="subtitle"
+                           IsVisible="{Binding HasSecondaryTitle}" TextWrapping="Wrap" />
+                <!-- Meta line (year · genres · ★rating), matching the discovery card. Status is not here —
+                     it is the chip beside the title. One line, trimmed, so a long genre list stays compact. -->
+                <TextBlock Text="{Binding MetaText}" Classes="subtitle"
+                           IsVisible="{Binding HasMetaText}"
+                           TextTrimming="CharacterEllipsis" MaxLines="1" />
+
+                <ProgressBar Value="{Binding ProgressFraction}" Minimum="0" Maximum="1"
+                             IsVisible="{Binding HasProgress}" />
+                <TextBlock Text="{Binding EpisodesText}" Classes="subtitle" />
+
+                <TextBlock Text="Some specials unwatched" FontSize="11"
+                           IsVisible="{Binding ShowSpecialsNote}" Opacity="0.6" />
+                <TextBlock Text="Needs review" FontSize="11"
+                           IsVisible="{Binding ShowNeedsReview}"
+                           Foreground="{DynamicResource AccentBrush}" />
+
+                <ProgressBar IsIndeterminate="True" Height="6" Width="60" HorizontalAlignment="Left"
+                             IsVisible="{Binding IsBusy}" />
+
+                <!-- Seasons render directly (no card-level "Episodes" toggle). Each season is a collapsible
+                     row: the header + chevron are tappable (ToggleCommand), and the episode rows show only
+                     while expanded (IsExpanded). The expanded/collapsed state is persisted (R9). -->
+                <ItemsControl ItemsSource="{Binding Seasons}" Margin="0,4,0,0">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:SeasonGroupViewModel">
+                            <StackPanel Spacing="1">
+                                <!-- The whole header row is the expand/collapse target (not just the chevron):
+                                     a wide hit area that is easy to hit and sits clear of the ScrollViewer's
+                                     scrollbar on the right. The chevron is purely visual. -->
+                                <Border Classes="row">
+                                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6"
+                                          Background="Transparent"
+                                          Cursor="Hand" PointerPressed="OnToggleSeason">
+                                        <TextBlock Grid.Column="0" Text="{Binding Header}"
+                                                   FontSize="12" FontWeight="Bold" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding CountText}"
+                                                   FontSize="11" VerticalAlignment="Center" Opacity="0.6" />
+                                        <TextBlock Grid.Column="2" Text="{Binding Chevron}"
+                                                   FontSize="14" VerticalAlignment="Center" Padding="10,6"
+                                                   Margin="0,0,6,0"
+                                                   Foreground="{DynamicResource AccentBrush}" />
+                                    </Grid>
+                                </Border>
+                                <ItemsControl ItemsSource="{Binding Episodes}" Margin="10,0,0,0"
+                                              IsVisible="{Binding IsExpanded}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:EpisodeRowViewModel">
+                                            <!-- The whole row is the watch toggle (MAUI's row tap gesture);
+                                                 the checkbox is display-only (IsEnabled=False) and the
+                                                 PointerPressed handler runs ToggleWatchedCommand. -->
+                                            <Border Classes="row">
+                                                <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="6"
+                                                      Background="Transparent" PointerPressed="OnToggleEpisode">
+                                                    <CheckBox Grid.Column="0" IsChecked="{Binding IsWatched}"
+                                                              IsHitTestVisible="False"
+                                                              VerticalAlignment="Center" />
+                                                    <TextBlock Grid.Column="1" Text="{Binding NumberText}"
+                                                               VerticalAlignment="Center" FontWeight="Bold" FontSize="11" />
+                                                    <TextBlock Grid.Column="2" Text="{Binding PrimaryTitle}" FontSize="11"
+                                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Grid.Column="3" Text="{Binding AirDateText}" FontSize="11"
+                                                               VerticalAlignment="Center" Opacity="0.6" />
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Grid>
+    </Border>
+</UserControl>

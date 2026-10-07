@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- ARCHITECTURE.md §3 Shows.Jobs.*: OutputType, Program.cs and the Infrastructure reference together,
+    since an Exe with no entry point does not build. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!-- AssemblyName drives log/<appname>.log via Assembly.GetName().Name (ARCHITECTURE.md §7). -->
+    <AssemblyName>RefreshUpdated</AssemblyName>
+    <RootNamespace>Shows.Jobs.RefreshUpdated</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Shows.Infrastructure\Shows.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

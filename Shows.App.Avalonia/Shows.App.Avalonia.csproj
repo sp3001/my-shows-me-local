@@ -1,0 +1,51 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    The Avalonia head — a second, cross-platform UI over the SAME Application/Infrastructure layers as
+    Shows.App (MAUI). Kept alongside the MAUI app so the two can be compared side by side; neither is
+    the other's dependency. Composition-root-only access to Infrastructure (ARCHITECTURE.md §2), exactly
+    like the MAUI head: only Program.cs / App.axaml.cs name an Infrastructure type.
+
+    Unlike the MAUI head this is a plain net8.0 desktop app (Avalonia draws its own controls via Skia),
+    so it has no Windows TFM, no UseMaui, and no platform folders.
+  -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>Shows.App.Avalonia</RootNamespace>
+    <AssemblyName>Shows.App.Avalonia</AssemblyName>
+    <Nullable>enable</Nullable>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+
+    <!-- Analyzer noise from Avalonia's generated XAML partials and the trimmed Program entry point, none
+         of which is code we own. Scoped to this project only — the rest of the solution keeps latest-all.
+           CA1852 — Program is a top-level sealed class with no derived types (the Avalonia entry point).
+           CA1812 — ViewLocator / generated view partials instantiated only via reflection or XAML.
+           CA1050 — types declared in namespaces the XAML compiler generates.
+           CA1724 — type name 'App' conflicts with namespace 'Shows.App': the App class is named App by
+             convention (both heads). Renaming it fights the framework's own partial-class wiring. -->
+    <NoWarn>$(NoWarn);CA1852;CA1812;CA1050;CA1724</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Avalonia 11.x, not 12.x: the repo pins the .NET 8 SDK (global.json), whose Roslyn (4.11) is older
+         than the compiler Avalonia 12's XAML source generators are built against (they need 4.14). The
+         generators are essential — they emit InitializeComponent for every .axaml — so the version must
+         match the SDK, not the newest release. Avalonia 11 is the last line that targets .NET 8. -->
+    <PackageReference Include="Avalonia" Version="11.3.2" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.3.2" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.2" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.2" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The only UI→Infrastructure edge, composition-root only (ARCHITECTURE.md §2), mirroring the MAUI
+         head. No View or ViewModel may name an Infrastructure type — only Program.cs / App.axaml.cs do. -->
+    <ProjectReference Include="..\Shows.Infrastructure\Shows.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

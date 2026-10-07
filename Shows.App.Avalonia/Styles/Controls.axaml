@@ -1,0 +1,238 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+      Component styles: the app's reusable visual language, expressed once with class selectors so the
+      views stay declarative (a card is just <Border Classes="card">). Every brush is a DynamicResource
+      into Theme.axaml, so light/dark switching and the accent are driven entirely by the token file.
+
+      These styles are additive: they only restyle elements that opt in via a class, or that already
+      exist (Button/TextBox/ComboBox/ListBox chrome). No binding, command, or event handler is touched,
+      so behaviour and performance are unchanged.
+    -->
+
+    <!-- ============ Buttons ============ -->
+
+    <!-- Primary (filled) button: the default Button is already the Fluent filled accent button, so we
+         only refine its shape and weight rather than fight the theme's foreground logic. -->
+    <Style Selector="Button">
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="16,8" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="MinHeight" Value="34" />
+    </Style>
+
+    <!-- Secondary: outlined, accent-tinted. Replaces the old inline Button.secondary so the look is
+         consistent and theme-aware (the old one hard-bound the accent brush directly). -->
+    <Style Selector="Button.secondary">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
+    <Style Selector="Button.secondary:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource SurfaceHoverBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+        <Setter Property="TextBlock.Foreground" Value="{DynamicResource AccentBrush}" />
+    </Style>
+
+    <!-- Destructive: red outline that fills on hover. Replaces the old inline Button.danger. -->
+    <Style Selector="Button.danger">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
+    </Style>
+    <Style Selector="Button.danger:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource DangerBrush}" />
+        <Setter Property="TextBlock.Foreground" Value="White" />
+    </Style>
+
+    <!-- Ghost / link-style button: no chrome, accent text. For inline actions. -->
+    <Style Selector="Button.ghost">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+        <Setter Property="Padding" Value="8,4" />
+    </Style>
+    <Style Selector="Button.ghost:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource SurfaceHoverBrush}" />
+    </Style>
+
+    <!-- ============ Text inputs ============ -->
+
+    <Style Selector="TextBox">
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="MinHeight" Value="36" />
+        <Setter Property="Padding" Value="10,6" />
+        <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    </Style>
+    <Style Selector="TextBox:focus">
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
+
+    <Style Selector="ComboBox">
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="MinHeight" Value="36" />
+        <Setter Property="Padding" Value="10,6" />
+    </Style>
+
+    <!-- ============ Cards ============ -->
+
+    <!-- The list card shared by the tracker, search, discovery and upcoming views. Soft surface, subtle
+         border, gentle hover lift. Hover only changes background/border (cheap, no layout invalidation). -->
+    <Style Selector="Border.card">
+        <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="Padding" Value="12" />
+        <Setter Property="Transitions">
+            <Setter.Value>
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.12" />
+                    <BrushTransition Property="BorderBrush" Duration="0:0:0.12" />
+                </Transitions>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style Selector="Border.card:pointerover">
+        <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}" />
+    </Style>
+
+    <!-- A section panel on the details page: a titled surface grouping related content. -->
+    <Style Selector="Border.section">
+        <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="Padding" Value="14" />
+    </Style>
+
+    <!-- Poster placeholder: the grey block shown while a poster is absent/loading. -->
+    <Style Selector="Border.poster">
+        <Setter Property="Background" Value="{DynamicResource PosterPlaceholderBrush}" />
+        <Setter Property="CornerRadius" Value="8" />
+    </Style>
+
+    <!-- Shared card poster (the Image and its placeholder Border). Compact list size by default; the
+         "large" modifier grows it to the details size (150x225) when a card is rendered inside the
+         Search/Discovery details page, matching the tracked-details poster. -->
+    <Style Selector="Image.cardPoster, Border.cardPoster">
+        <Setter Property="Width" Value="70" />
+        <Setter Property="Height" Value="100" />
+    </Style>
+    <Style Selector="Image.cardPoster.large, Border.cardPoster.large">
+        <Setter Property="Width" Value="150" />
+        <Setter Property="Height" Value="225" />
+    </Style>    <!-- ============ Chips / pills ============ -->
+
+    <!-- A small status/metadata pill. Used for the show status and the "special" tag. -->
+    <Style Selector="Border.chip">
+        <Setter Property="Background" Value="{DynamicResource ChipBackgroundBrush}" />
+        <Setter Property="CornerRadius" Value="999" />
+        <Setter Property="Padding" Value="8,2" />
+    </Style>
+    <Style Selector="TextBlock.chip">
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <!-- A highlighted chip for the user's own rating: a tonal accent pill (soft accent-tinted fill +
+         accent text) so it stands out from the muted status chip without the glare of a solid bright
+         block — the flat white-on-purple read as too loud in dark theme. Applied alongside .chip (which
+         supplies the pill shape and padding). -->
+    <Style Selector="Border.chip.rating">
+        <Setter Property="Background" Value="{DynamicResource RatingChipBackgroundBrush}" />
+    </Style>
+    <Style Selector="TextBlock.chip.rating">
+        <Setter Property="Foreground" Value="{DynamicResource RatingChipTextBrush}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <!-- ============ Clickable rating stars ============ -->
+
+    <!-- One star of the rating widget. Empty by default (muted); the .fill class — set from the view via
+         StarFilledConverter — colours it the accent red (DangerBrush, theme-aware). Hand cursor so the row
+         reads as tappable. Clicking the star at the current rating clears it (handled in code-behind). -->
+    <Style Selector="TextBlock.star">
+        <Setter Property="Text" Value="&#x2605;" />
+        <Setter Property="FontSize" Value="26" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+    </Style>
+    <Style Selector="TextBlock.star.fill">
+        <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
+    </Style>
+
+    <!-- ============ Typography helpers ============ -->
+
+    <Style Selector="TextBlock.title">
+        <Setter Property="FontSize" Value="22" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
+    <Style Selector="TextBlock.subtitle">
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    </Style>
+    <Style Selector="TextBlock.sectionHeader">
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
+    <Style Selector="TextBlock.muted">
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    </Style>
+
+    <!-- A tappable accent link (show titles that open details). Replaces the per-view underline+accent
+         TextBlock so the affordance is consistent. -->
+    <Style Selector="TextBlock.link">
+        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+
+    <!-- ============ Tab strip (MainWindow) ============ -->
+
+    <!-- Present the shell's tab ListBox items as clean pill tabs rather than boxed list rows: no
+         selection highlight box, accent text + underline on the active tab. -->
+    <Style Selector="ListBox.tabStrip ListBoxItem">
+        <Setter Property="Padding" Value="12,6" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="ListBox.tabStrip ListBoxItem:selected /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource ChipBackgroundBrush}" />
+    </Style>
+    <Style Selector="ListBox.tabStrip ListBoxItem:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource SurfaceHoverBrush}" />
+    </Style>
+
+    <!-- ============ Category selector (TrackingView) ============ -->
+
+    <!-- The category links keep their converter-driven colour; we only give them a roomier hit target
+         and a hover background. -->
+    <Style Selector="TextBlock.categoryLink">
+        <Setter Property="FontSize" Value="15" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Padding" Value="10,6" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+
+    <!-- ============ Episode / season rows ============ -->
+
+    <!-- A hoverable row on the details page (episode toggle target). Transparent until hovered, so the
+         whole row reads as tappable without a visible box. -->
+    <Style Selector="Border.row">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="6,4" />
+    </Style>
+    <Style Selector="Border.row:pointerover">
+        <Setter Property="Background" Value="{DynamicResource SurfaceHoverBrush}" />
+    </Style>
+
+</Styles>

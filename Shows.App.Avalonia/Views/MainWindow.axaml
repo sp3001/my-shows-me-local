@@ -1,0 +1,67 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Shows.App.Avalonia.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="650"
+        x:Class="Shows.App.Avalonia.Views.MainWindow"
+        x:DataType="vm:ShellViewModel"
+        Width="960" Height="700"
+        WindowStartupLocation="CenterScreen"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="Shows"
+        Background="{DynamicResource WindowBackgroundBrush}">
+
+    <!-- The Avalonia replacement for MAUI's Shell: a top tab strip (My Shows / Search / Discovery) over a
+         ContentControl that renders the current page. The ViewLocator resolves whichever view model is
+         current (a tab or a pushed details page) to its view. A Back button appears only when a details
+         page is pushed over a tab (CanGoBack). -->
+    <DockPanel>
+        <!-- Header: a brand mark + the tab strip on the left, a Back button on the right (shown only over
+             a details page). The ListBox is the tab strip — it gives the active-tab highlight for free and
+             drives SelectedTab, which clears any details page and shows the tab. The tabStrip class (see
+             Controls.axaml) renders the items as clean pill tabs. -->
+        <Border DockPanel.Dock="Top" Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="16,10">
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <Border Background="{DynamicResource AccentBrush}" CornerRadius="7"
+                            Width="26" Height="26">
+                        <TextBlock Text="S" FontSize="15" FontWeight="Bold"
+                                   Foreground="{DynamicResource AccentTextBrush}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <TextBlock Text="Shows" FontSize="17" FontWeight="Bold" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextPrimaryBrush}" />
+                </StackPanel>
+
+                <ListBox Grid.Column="1" Classes="tabStrip"
+                         ItemsSource="{Binding Tabs}"
+                         SelectedItem="{Binding SelectedTab}"
+                         Background="Transparent" BorderThickness="0"
+                         HorizontalAlignment="Left" VerticalAlignment="Center">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" Spacing="4" />
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ShellTab">
+                            <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="SemiBold" />
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <Button Grid.Column="2" Classes="secondary" Content="← Back"
+                        Command="{Binding GoBackCommand}"
+                        IsVisible="{Binding CanGoBack}"
+                        VerticalAlignment="Center" />
+            </Grid>
+        </Border>
+
+        <!-- The current page (a tab view model or a pushed details page). The app-wide ViewLocator picks
+             the view. -->
+        <ContentControl Content="{Binding CurrentPage}" />
+    </DockPanel>
+</Window>
+

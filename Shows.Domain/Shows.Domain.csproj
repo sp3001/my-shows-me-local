@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- ARCHITECTURE.md §3: zero NuGet packages, no EF attributes, no JSON attributes. Plain C#. -->
+  <PropertyGroup>
+    <RootNamespace>Shows.Domain</RootNamespace>
+  </PropertyGroup>
+
+</Project>

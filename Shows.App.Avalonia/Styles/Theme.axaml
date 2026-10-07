@@ -1,0 +1,81 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+      Design tokens for the app's visual language. A single source of truth for the palette so the
+      component styles in Controls.axaml and the views reference named brushes rather than hard-coded
+      hex values. The accent is the same purple the category-link converter already uses (#512BD4 /
+      #AC99EA), so the theme reads as a deliberate extension of what was there, not a new direction.
+
+      ThemeDictionaries let each token resolve per theme variant; a {DynamicResource} reference picks the
+      right one when the user switches between light and dark.
+    -->
+
+    <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Default">
+            <Color x:Key="AccentColor">#512BD4</Color>
+            <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}" />
+            <SolidColorBrush x:Key="AccentTextBrush" Color="#FFFFFF" />
+
+            <!-- Window / page background: a near-neutral surface, slightly cool. -->
+            <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#F4F4F8" />
+            <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF" />
+            <SolidColorBrush x:Key="SurfaceAltBrush" Color="#FAFAFD" />
+            <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#F0EFFA" />
+
+            <SolidColorBrush x:Key="BorderBrush" Color="#E4E4EC" />
+            <SolidColorBrush x:Key="BorderStrongBrush" Color="#D2D2DE" />
+
+            <SolidColorBrush x:Key="TextPrimaryBrush" Color="#1B1B22" />
+            <SolidColorBrush x:Key="TextSecondaryBrush" Color="#6A6A78" />
+            <SolidColorBrush x:Key="TextMutedBrush" Color="#9A9AA8" />
+
+            <SolidColorBrush x:Key="ChipBackgroundBrush" Color="#EEECF8" />
+            <!-- Rating chip: a tonal accent pill (soft lavender fill + deep accent text) rather than a
+                 solid bright block, so it stands out from the muted status chip without glaring. -->
+            <SolidColorBrush x:Key="RatingChipBackgroundBrush" Color="#E4DBF7" />
+            <SolidColorBrush x:Key="RatingChipTextBrush" Color="#512BD4" />
+            <SolidColorBrush x:Key="PosterPlaceholderBrush" Color="#E8E8F0" />
+
+            <!-- Neutral (non-purple) block highlight: a clearly visible soft gray, distinct from the
+                 near-white page background. Used by the Upcoming "This Week" block. -->
+            <SolidColorBrush x:Key="HighlightBrush" Color="#E4E4EA" />
+
+            <SolidColorBrush x:Key="DangerBrush" Color="#C0392B" />
+            <SolidColorBrush x:Key="DangerBackgroundBrush" Color="#FBEAE8" />
+        </ResourceDictionary>
+
+        <ResourceDictionary x:Key="Dark">
+            <Color x:Key="AccentColor">#AC99EA</Color>
+            <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}" />
+            <SolidColorBrush x:Key="AccentTextBrush" Color="#1B1B22" />
+
+            <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#141419" />
+            <SolidColorBrush x:Key="SurfaceBrush" Color="#1E1E26" />
+            <SolidColorBrush x:Key="SurfaceAltBrush" Color="#23232C" />
+            <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#2A2A36" />
+
+            <SolidColorBrush x:Key="BorderBrush" Color="#2E2E3A" />
+            <SolidColorBrush x:Key="BorderStrongBrush" Color="#3A3A48" />
+
+            <SolidColorBrush x:Key="TextPrimaryBrush" Color="#EDEDF2" />
+            <SolidColorBrush x:Key="TextSecondaryBrush" Color="#A6A6B4" />
+            <SolidColorBrush x:Key="TextMutedBrush" Color="#74747F" />
+
+            <SolidColorBrush x:Key="ChipBackgroundBrush" Color="#2C2A3D" />
+            <!-- Rating chip: a tonal accent pill (purple-tinted dark fill + light accent text) rather than a
+                 solid bright block, so it stands out from the muted status chip without glaring. -->
+            <SolidColorBrush x:Key="RatingChipBackgroundBrush" Color="#3A3352" />
+            <SolidColorBrush x:Key="RatingChipTextBrush" Color="#C9BBF2" />
+            <SolidColorBrush x:Key="PosterPlaceholderBrush" Color="#2A2A34" />
+
+            <!-- Neutral (non-purple) block highlight: a clearly visible soft gray, distinct from the dark
+                 page background. Used by the Upcoming "This Week" block. -->
+            <SolidColorBrush x:Key="HighlightBrush" Color="#303038" />
+
+            <SolidColorBrush x:Key="DangerBrush" Color="#E74C3C" />
+            <SolidColorBrush x:Key="DangerBackgroundBrush" Color="#3A221F" />
+        </ResourceDictionary>
+    </ResourceDictionary.ThemeDictionaries>
+
+</ResourceDictionary>

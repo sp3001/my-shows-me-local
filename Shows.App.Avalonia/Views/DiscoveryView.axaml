@@ -1,0 +1,118 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Shows.App.Avalonia.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:Class="Shows.App.Avalonia.Views.DiscoveryView"
+             x:DataType="vm:DiscoveryViewModel">
+
+    <!-- The Discovery tab (user-issues 19): three buckets over the cached /schedule/full snapshot, with
+         name/genre/network/country filters and pagination. The results list reuses the shared ShowCardView
+         via the app-wide ViewLocator, so the add flow and the Details link are identical to Search. -->
+    <Grid RowDefinitions="Auto,Auto,Auto,*">
+
+        <!-- Bucket switcher + name filter on one row. -->
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="12,8,12,4">
+            <ComboBox Grid.Column="0" MinWidth="140"
+                      ItemsSource="{Binding BucketOptions}"
+                      SelectedItem="{Binding SelectedBucket}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:BucketOption">
+                        <TextBlock Text="{Binding Display}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+
+            <TextBox Grid.Column="1" Margin="8,0" Watermark="Filter by name…"
+                     Text="{Binding NameFilter}"
+                     TextChanged="OnNameFilterChanged"
+                     KeyDown="OnFilterKeyDown" />
+
+            <Button Grid.Column="2" Content="Search" Command="{Binding ApplyFiltersCommand}" />
+        </Grid>
+
+        <!-- Facet filters: type / genre / network / country. Each is a dropdown of the values present in the
+             current bucket, labelled "Value (Count)" (user-issues 19 follow-up). Selecting one narrows
+             immediately; the option counts respect every OTHER active filter. Columns are equal-width and
+             fill the row (ColumnSpacing, not per-item margins) so there are no gaps; an unset facet shows a
+             "Not set" placeholder rather than an "All" selection. -->
+        <Grid Grid.Row="1" ColumnDefinitions="*,*,*,*" ColumnSpacing="6" Margin="12,0,12,4">
+            <ComboBox Grid.Column="0" PlaceholderText="Not set"
+                      HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                      ItemsSource="{Binding TypeOptions}"
+                      SelectedItem="{Binding SelectedType}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:FacetOption">
+                        <TextBlock Text="{Binding Label}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+            <ComboBox Grid.Column="1" PlaceholderText="Not set"
+                      HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                      ItemsSource="{Binding GenreOptions}"
+                      SelectedItem="{Binding SelectedGenre}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:FacetOption">
+                        <TextBlock Text="{Binding Label}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+            <ComboBox Grid.Column="2" PlaceholderText="Not set"
+                      HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                      ItemsSource="{Binding NetworkOptions}"
+                      SelectedItem="{Binding SelectedNetwork}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:FacetOption">
+                        <TextBlock Text="{Binding Label}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+            <ComboBox Grid.Column="3" PlaceholderText="Not set"
+                      HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                      ItemsSource="{Binding CountryOptions}"
+                      SelectedItem="{Binding SelectedCountry}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:FacetOption">
+                        <TextBlock Text="{Binding Label}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+        </Grid>
+
+        <StackPanel Grid.Row="2" Orientation="Vertical">
+            <ProgressBar IsIndeterminate="True" Height="6" Margin="12,4"
+                         IsVisible="{Binding IsBusy}" />
+            <TextBlock Text="{Binding StatusMessage}" Margin="12,4" Opacity="0.6"
+                       IsVisible="{Binding IsBusy, Converter={StaticResource InvertBool}}" />
+        </StackPanel>
+
+        <!-- Results + pager. -->
+        <Grid Grid.Row="3" RowDefinitions="*,Auto">
+            <ListBox Grid.Row="0" ItemsSource="{Binding Results}" Margin="12,0"
+                     Padding="0,0,10,0" Background="Transparent" BorderThickness="0">
+                <ListBox.Styles>
+                    <Style Selector="ListBoxItem">
+                        <Setter Property="Padding" Value="0" />
+                    </Style>
+                </ListBox.Styles>
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ShowCardViewModel">
+                        <ContentControl Content="{Binding}" />
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center"
+                        Spacing="12" Margin="12,8">
+                <Button Content="◀ Previous"
+                        Command="{Binding PreviousPageCommand}"
+                        IsVisible="{Binding HasPrevious}" />
+                <TextBlock Text="{Binding PageSummary}" VerticalAlignment="Center" Opacity="0.7" />
+                <Button Content="Next ▶"
+                        Command="{Binding NextPageCommand}"
+                        IsVisible="{Binding HasNext}" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

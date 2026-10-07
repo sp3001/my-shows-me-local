@@ -1,0 +1,114 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Shows.App.Avalonia.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:Class="Shows.App.Avalonia.Views.TrackingView"
+             x:DataType="vm:TrackingViewModel">
+
+    <!-- The four category tabs over the user's tracked shows (SPEC F4) plus the Upcoming view. The
+         category selector is a row of tappable labels (improvement 1); the active one is highlighted via
+         the converter. Below it a filter + sort row, then the list. Three list controls, one visible per
+         category (ADR-032): a virtualized ListBox for the non-Started categories, and a ScrollViewer +
+         ItemsControl for Started / Upcoming (whose cards expand inline and must re-measure). -->
+    <Grid RowDefinitions="Auto,Auto,Auto,*">
+        <!-- Category links (improvement 1): a horizontal row of tappable labels. Each label's DataContext
+             is its CategoryTab; the page VM is reached through the UserControl ancestor for the selected
+             comparison and the command. -->
+        <ItemsControl Grid.Row="0" ItemsSource="{Binding CategoryTabs}" Margin="12,12,12,4">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel Orientation="Horizontal" Spacing="6" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:CategoryTab">
+                    <Border Background="Transparent" CornerRadius="8">
+                        <TextBlock Classes="categoryLink" Text="{Binding Display}"
+                                   PointerPressed="OnSelectCategory">
+                            <TextBlock.Foreground>
+                                <MultiBinding Converter="{StaticResource CategorySelectedColor}">
+                                    <Binding Path="." />
+                                    <Binding Path="DataContext.SelectedCategory"
+                                             RelativeSource="{RelativeSource AncestorType=UserControl}" />
+                                </MultiBinding>
+                            </TextBlock.Foreground>
+                        </TextBlock>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- Filter + sort row (improvements 8 and 2). The filter applies to every category; the sort
+             control and the "Waiting for new episodes" checkbox (improvement 4) show only on Started. -->
+        <Border Grid.Row="1" Margin="12,4" Padding="10,8" CornerRadius="10"
+                Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                IsVisible="{Binding IsBusy, Converter={StaticResource InvertBool}}">
+            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                <TextBox Grid.Column="0" Watermark="Filter by name" Text="{Binding FilterText}" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4"
+                            IsVisible="{Binding IsStartedView}" VerticalAlignment="Center">
+                    <CheckBox IsChecked="{Binding ShowWaitingShows}" VerticalAlignment="Center" />
+                    <TextBlock Text="Waiting" VerticalAlignment="Center" FontSize="13" />
+                </StackPanel>
+                <ComboBox Grid.Column="2" Width="130"
+                          ItemsSource="{Binding SortOptions}"
+                          SelectedItem="{Binding SelectedSortOption}"
+                          IsVisible="{Binding IsSortable}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:SortOption">
+                            <TextBlock Text="{Binding Display}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </Grid>
+        </Border>
+
+        <ProgressBar Grid.Row="2" IsIndeterminate="True" Height="6" Margin="12,4"
+                     IsVisible="{Binding IsBusy}" />
+
+        <TextBlock Grid.Row="2" Text="{Binding StatusMessage}" Margin="12,4" Opacity="0.6"
+                   IsVisible="{Binding IsBusy, Converter={StaticResource InvertBool}}" />
+
+        <!-- Non-Started categories: a virtualized ListBox (SelectionMode=None ? no selection chrome). The
+             200+-item Later/Finished lists open instantly; those cards never expand, so virtualization is
+             safe. -->
+        <ListBox Grid.Row="3" ItemsSource="{Binding Shows}" Margin="12,0"
+                 Padding="0,0,10,0" Background="Transparent" BorderThickness="0"
+                 IsVisible="{Binding IsStarted, Converter={StaticResource InvertBool}}">
+            <ListBox.Styles>
+                <Style Selector="ListBoxItem">
+                    <Setter Property="Padding" Value="0" />
+                </Style>
+            </ListBox.Styles>
+            <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:TrackedShowCardViewModel">
+                    <ContentControl Content="{Binding}" />
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <!-- Started: a ScrollViewer + ItemsControl (non-virtualizing) so a card re-measures when a season
+             expands. Two sections (improvement 4): shows with something to watch, then the optional
+             "Waiting for new episodes" block. -->
+        <ScrollViewer Grid.Row="3" Margin="12,0" Padding="0,0,10,0" IsVisible="{Binding IsStartedView}">
+            <StackPanel Spacing="0">
+                <ItemsControl ItemsSource="{Binding StartedShows}" />
+
+                <TextBlock Text="Waiting for new episodes" FontSize="14" FontWeight="Bold" Margin="2,16,2,6"
+                           IsVisible="{Binding ShowWaitingSection}" Opacity="0.6" />
+                <ItemsControl ItemsSource="{Binding StartedWaitingShows}"
+                              IsVisible="{Binding ShowWaitingSection}" />
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Upcoming view (improvement 4): a third list shown only when IsUpcoming. Started shows with an
+             unknown-or-future episode, each with its future episodes always expanded. A ScrollViewer +
+             ItemsControl (rows expand like the Started tracker's). -->
+        <ScrollViewer Grid.Row="3" Margin="12,0" Padding="0,0,10,0" IsVisible="{Binding IsUpcoming}">
+            <ItemsControl ItemsSource="{Binding UpcomingShows}" />
+        </ScrollViewer>
+    </Grid>
+</UserControl>

@@ -1,0 +1,31 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Shows.App.Avalonia.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:Class="Shows.App.Avalonia.Views.UpcomingEpisodeRowView"
+             x:DataType="vm:UpcomingEpisodeRowViewModel">
+
+    <!-- One episode row in the Upcoming date grouping (improvement 4 follow-up):
+         (Show) (Season) (Episode or "Special") (EpisodeName). Read-only — an un-aired episode cannot be
+         marked watched. The show title stays clickable (hand cursor + tap) and is the larger, bolder part
+         of the row; a thin underline beneath each row separates the repeated shows. NO purple anywhere —
+         the show name uses the primary text colour, and the underline a neutral border colour distinct
+         from the page background. -->
+    <Border BorderBrush="{DynamicResource BorderStrongBrush}" BorderThickness="0,0,0,1" Padding="0,4">
+        <Grid ColumnDefinitions="*,Auto,Auto,*" ColumnSpacing="8">
+            <TextBlock Grid.Column="0" Text="{Binding ShowTitle}" Cursor="Hand"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"
+                       TextTrimming="CharacterEllipsis" PointerPressed="OnOpenDetails" />
+            <TextBlock Grid.Column="1" Text="{Binding SeasonText}" FontSize="13"
+                       Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center" />
+            <TextBlock Grid.Column="2" Text="{Binding EpisodeText}" FontSize="13" FontWeight="Bold"
+                       Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" />
+            <TextBlock Grid.Column="3" Text="{Binding EpisodeName}" FontSize="13"
+                       Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"
+                       TextTrimming="CharacterEllipsis" IsVisible="{Binding HasEpisodeName}" />
+        </Grid>
+    </Border>
+</UserControl>

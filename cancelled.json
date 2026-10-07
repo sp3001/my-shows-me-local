@@ -1,0 +1,1199 @@
+{
+    "jsonrpc": "2.0",
+    "id": 54,
+    "result": [
+        {
+            "show": {
+                "id": 50,
+                "title": "Симпсоны",
+                "titleOriginal": "The Simpsons",
+                "alias": "the-simpsons",
+                "status": "Returning Series",
+                "totalSeasons": 38,
+                "genreIds": [
+                    1,
+                    10
+                ],
+                "year": 1989,
+                "watching": 100567,
+                "voted": 44887,
+                "rating": 4.51,
+                "images": [
+                    "5f67cf990d0210afb13d24817a7df7da.jpg",
+                    "9641a0a664dde3e7b6c5b9a0e1f248d8.jpg",
+                    "b002f1847bdf2590dc2665f9fe1c15f4.jpg",
+                    "17f7f0eedc1a82d9acf56d0d6f6af64f.jpg",
+                    "a98b0a9a0ba8b89ce5ffe7befb0e5c62.jpg"
+                ],
+                "image": "https://media.myshows.me/shows/small/5/f6/5f67cf990d0210afb13d24817a7df7da.jpg",
+                "imageInfo": {
+                    "width": 1920,
+                    "height": 1080,
+                    "previewUrl": "https://media.myshows.me/preview/shows/5f67cf990d0210afb13d24817a7df7da",
+                    "blurhash": "LaIY,do_56T2Xrr;NEV~JYsDxbSk",
+                    "hash": "5f67cf990d0210afb13d24817a7df7da.jpg",
+                    "namespace": "shows",
+                    "source": "tvmaze"
+                },
+                "onlineCount": 0,
+                "promoUrl": "",
+                "category": "show",
+                "canRate": true,
+                "userShow": {
+                    "id": 0,
+                    "watchStatus": null,
+                    "rating": null,
+                    "isFavorite": false,
+                    "note": null,
+                    "watchCount": 0,
+                    "canReview": false,
+                    "reviewSeasons": null,
+                    "isIgnored": false
+                },
+                "genres": [
+                    {
+                        "id": 1,
+                        "title": "Комедия",
+                        "alias": "comedy"
+                    },
+                    {
+                        "id": 10,
+                        "title": "Семейный",
+                        "alias": "family"
+                    }
+                ]
+            },
+            "watchStatus": "cancelled",
+            "rating": 4,
+            "watchCount": 1,
+            "totalEpisodes": 802,
+            "watchedEpisodes": 356,
+            "runtime": 22,
+            "totalHours": 294.1,
+            "watchedHours": 130.5
+        },
+        {
+            "show": {
+                "id": 304,
+                "title": "Отбросы",
+                "titleOriginal": "Misfits",
+                "alias": "misfits",
+                "status": "Canceled/Ended",
+                "totalSeasons": 5,
+                "genreIds": [
+                    1,
+                    6,
+                    9
+                ],
+                "year": 2009,
+                "watching": 304130,
+                "voted": 147833,
+                "rating": 4.19,
+                "images": [
+                    "123145dc590e00e6c762a53f0b54983b.jpg",
+                    "c5fe0cf776e720e3e7c966657fe8303a.jpg",
+                    "3765979aeb4aff41d3511f501b9e0380.jpg",
+                    "4a9ba4c8321d42fb5be6bc52a7f6e310.jpg",
+                    "c04ca80f963623168f87d7e3c2531fa2.jpg"
+                ],
+                "image": "https://media.myshows.me/shows/small/1/23/123145dc590e00e6c762a53f0b54983b.jpg",
+                "imageInfo": {
+                    "width": 1920,
+                    "height": 1080,
+                    "previewUrl": "https://media.myshows.me/preview/shows/123145dc590e00e6c762a53f0b54983b",
+                    "blurhash": "LIHdU2v#}[S#xt%2xuog7LE1xu$%",
+                    "hash": "123145dc590e00e6c762a53f0b54983b.jpg",
+                    "namespace": "shows",
+                    "source": "tvmaze"
+                },
+                "onlineCount": 0,
+                "promoUrl": "",
+                "category": "show",
+                "canRate": true,
+                "userShow": {
+                    "id": 0,
+                    "watchStatus": null,
+                    "rating": null,
+                    "isFavorite": false,
+                    "note": null,
+                    "watchCount": 0,
+                    "canReview": false,
+                    "reviewSeasons": null,
+                    "isIgnored": false
+                },
+                "genres": [
+                    {
+                        "id": 1,
+                        "title": "Комедия",
+                        "alias": "comedy"
+                    },
+                    {
+                        "id": 6,
+                        "title": "Драма",
+                        "alias": "drama"
+                    },
+                    {
+                        "id": 9,
+                        "title": "Фантастика",
+                        "alias": "sci-fi"
+                    }
+                ]
+            },
+            "watchStatus": "cancelled",
+            "rating": 3,
+            "watchCount": 1,
+            "totalEpisodes": 36,
+            "watchedEpisodes": 12,
+            "runtime": 47,
+            "totalHours": 28.2,
+            "watchedHours": 9.4
+        },
+        {
+            "show": {
+                "id": 325,
+                "title": "РеГенезис",
+                "titleOriginal": "ReGenesis",
+                "alias": "regenesis",
+                "status": "Canceled/Ended",
+                "totalSeasons": 4,
+                "genreIds": [
+                    6,
+                    25,
+                    9
+                ],
+                "year": 2004,
+                "watching": 2549,
+                "voted": 1050,
+                "rating": 3.61,
+                "images": [
+                    "9f8ac64217747dc7ad0d39294943e351.jpg",
+                    "da2c05435a1aed62151d16de6ada61e6.jpg",
+                    "0be57b49b894121b6e653bbc83ab516d.jpg",
+                    "c10d31ca729ec89f99ce8cad0c757b54.jpg",
+                    "c6a5022b626a793d6384078109e9686b.jpg"
+                ],
+                "image": "https://media.myshows.me/shows/small/9/f8/9f8ac64217747dc7ad0d39294943e351.jpg",
+                "imageInfo": {
+                    "width": 1280,
+                    "height": 720,
+                    "previewUrl": "https://media.myshows.me/preview/shows/9f8ac64217747dc7ad0d39294943e351",
+                    "blurhash": "LBHV0Y9FR4_30L%MM{M|DhxuE2j[",
+                    "hash": "9f8ac64217747dc7ad0d39294943e351.jpg",
+                    "namespace": "shows",
+                    "source": "tvmaze"
+                },
+                "onlineCount": 0,
+                "promoUrl": "",
+                "category": "show",
+                "canRate": true,
+                "userShow": {
+                    "id": 0,
+                    "watchStatus": null,
+                    "rating": null,
+                    "isFavorite": false,
+                    "note": null,
+                    "watchCount": 0,
+                    "canReview": false,
+                    "reviewSeasons": null,
+                    "isIgnored": false
+                },
+                "genres": [
+                    {
+                        "id": 6,
+                        "title": "Драма",
+                        "alias": "drama"
+                    },
+                    {
+                        "id": 25,
+                        "title": "Детектив",
+                        "alias": "mystery"
+                    },
+                    {
+                        "id": 9,
+                        "title": "Фантастика",
+                        "alias": "sci-fi"
+                    }
+                ]
+            },
+            "watchStatus": "cancelled",
+            "rating": 3,
+            "watchCount": 1,
+            "totalEpisodes": 52,
+            "watchedEpisodes": 13,
+            "runtime": 43,
+            "totalHours": 37.3,
+            "watchedHours": 9.3
+        },
+        {
+            "show": {
+                "id": 55,
+                "title": "Клиника",
+                "titleOriginal": "Scrubs",
+                "alias": "scrubs",
+                "status": "Canceled/Ended",
+                "totalSeasons": 9,
+                "genreIds": [
+                    1,
+                    6,
+                    35
+                ],
+                "year": 2001,
+                "watching": 184455,
+                "voted": 92517,
+                "rating": 4.62,
+                "images": [
+                    "3218792d85d3a7d35f72aeab0f73ec5d.jpg"
+                ],
+                "image": "https://media.myshows.me/shows/small/3/21/3218792d85d3a7d35f72aeab0f73ec5d.jpg",
+                "imageInfo": {
+                    "width": 1280,
+                    "height": 720,
+                    "previewUrl": "https://media.myshows.me/preview/shows/3218792d85d3a7d35f72aeab0f73ec5d",
+                    "blurhash": "LHG[+t%Lobof~pt6Rks.e.jYD*j=",
+                    "hash": "3218792d85d3a7d35f72aeab0f73ec5d.jpg",
+                    "namespace": "shows",
+                    "source": "tvmaze"
+                },
+                "onlineCount": 0,
+                "promoUrl": "",
+                "category": "show",
+                "canRate": true,
+                "userShow": {
+                    "id": 0,
+                    "watchStatus": null,
+                    "rating": null,
+                    "isFavorite": false,
+                    "note": null,
+                    "watchCount": 0,
+                    "canReview": false,
+                    "reviewSeasons": null,
+                    "isIgnored": false
+                },
+                "genres": [
+                    {
+                        "id": 1,
+                        "title": "Комедия",
+                        "alias": "comedy"
+                    },
+                    {
+                        "id": 6,
+                        "title": "Драма",
+                        "alias": "drama"
+                    },
+                    {
+                        "id": 35,
+                        "title": "Медицинский",
+                        "alias": "medical"
+                    }
+                ]
+            },
+            "watchStatus": "cancelled",
+            "rating": 3,
+            "watchCount": 1,
+            "totalEpisodes": 182,
+            "watchedEpisodes": 10,
+            "runtime": 22,
+            "totalHours": 66.7,
+            "watchedHours": 3.7
+        },
+        {
+            "show": {
+                "id": 26428,
+                "title": "Настоящий детектив",
+                "titleOriginal": "True Detective",
+                "alias": "true-detective",
+                "status": "Returning Series",
+                "totalSeasons": 4,
+                "genreIds": [
+                    28,
+                    6,
+                    26
+                ],
+                "year": 2014,
+                "watching": 198618,
+                "voted": 83491,
+                "rating": 4.5,
+                "images": [
+                    "8b0dae9bcfc6d889a2760a4c30eb7f91.jpg",
+                    "85a375f836203b61594137719d6846b6.jpg",
+                    "68402cd5f00614415ebebd03c5ede330.jpg",
+                    "ba5cae5030a76228f0a01f890ba09a01.jpg"
+                ],
+                "image": "https://media.myshows.me/shows/small/8/b0/8b0dae9bcfc6d889a2760a4c30eb7f91.jpg",
+                "imageInfo": {
+                    "width": 1920,
+                    "height": 1080,
+                    "previewUrl": "https://media.myshows.me/preview/shows/8b0dae9bcfc6d889a2760a4c30eb7f91",
+                    "blurhash": "L3C6#}E10K4n^+D%?a_3-;oeWBxu",
+                    "hash": "8b0dae9bcfc6d889a2760a4c30eb7f91.jpg",
+                    "namespace": "shows",
+                    "source": "tvmaze"
+                },
+                "onlineCount": 0,
+                "promoUrl": "",
+                "category": "show",
+                "canRate": true,
+                "userShow": {
+                    "id": 0,
+                    "watchStatus": null,
+                    "rating": null,
+                    "isFavorite": false,
+                    "note": null,
+                    "watchCount": 0,
+                    "canReview": false,
+                    "reviewSeasons": null,
+                    "isIgnored": false
+                },
+                "genres": [
+                    {
+                        "id": 28,
+                        "title": "Криминал",
+                        "alias": "crime"
+                    },
+                    {
+                        "id": 6,
+                        "title": "Драма",
+                        "alias": "drama"
+                    },
+                    {
+                        "id": 26,
+                        "title": "Триллер",
+                        "alias": "thriller"
+                    }
+                ]
+            },
+            "watchStatus": "cancelled",
+            "rating": 3,
+            "watchCount": 1,
+            "totalEpisodes": 30,
+            "watchedEpisodes": 8,
+            "runtime": 60,
+            "totalHours": 30,
+            "watchedHours": 8
+        },
+        {
+            "show": {
+                "id": 53926,
+                "title": "Призраки",
+                "titleOriginal": "Ghosted",
+                "alias": "ghosted",
+                "status": "Canceled/Ended",
+                "totalSeasons": 1,
+                "genreIds": [
+                    1,
+                    112,
+                    25
+                ],
+                "year": 2017,
+                "watching": 5713,
+                "voted": 2133,
+                "rating": 3.05,
+                "images": [
+                    "4bf47da2493a48d5d1267fdd597afde2.jpg"
+                ],
+                "image": "https://media.myshows.me/shows/small/4/bf/4bf47da2493a48d5d1267fdd597afde2.jpg",
+                "imageInfo": {
+                    "width": 1920,
+                    "height": 1080,
+                    "previewUrl": "https://media.myshows.me/preview/shows/4bf47da2493a48d5d1267fdd597afde2",
+                    "blurhash": "LH7L.he.8wae.TtmDOR4yDofRPRP",
+                    "hash": "4bf47da2493a48d5d1267fdd597afde2.jpg",
+                    "namespace": "shows",
+                    "source": "tvmaze"
+                },
+                "onlineCount": 0,
+                "promoUrl": "",
+                "category": "show",
+                "canRate": true,
+                "userShow": {
+                    "id": 0,
+                    "watchStatus": null,
+                    "rating": null,
+                    "isFavorite": false,
+                    "note": null,
+                    "watchCount": 0,
+                    "canReview": false,
+                    "reviewSeasons": null,
+                    "isIgnored": false
+                },
+                "genres": [
+                    {
+                        "id": 1,
+                        "title": "Комедия",
+                        "alias": "comedy"
+                    },
+                    {
+                        "id": 112,
+                        "title": "Сверхъестественное",
+                        "alias": "supernatural"
+                    },
+                    {
+                        "id": 25,
+                        "title": "Детектив",
+                        "alias": "mystery"
+                    }
+                ]
+            },
+            "watchStatus": "cancelled",
+            "rating": 2,
+            "watchCount": 1,
+            "totalEpisodes": 16,
+            "watchedEpisodes": 3,
+            "runtime": 22,
+            "totalHours": 5.9,
+            "watchedHours": 1.1
+        },
+        {
+            "show": {
+                "id": 38226,
+                "title": "На грани",
+                "titleOriginal": "The Brink",
+                "alias": "the-brink",
+                "status": "Canceled/Ended",
+                "totalSeasons": 1,
+                "genreIds": [
+                    1,
+                    27
+                ],
+                "year": 2015,
+                "watching": 10485,
+                "voted": 4695,
+                "rating": 4.24,
+                "images": [
+                    "b0db236d9c2775e49fdedf341bd62c86.jpg"
+                ],
+                "image": "https://media.myshows.me/shows/small/b/0d/b0db236d9c2775e49fdedf341bd62c86.jpg",
+                "imageInfo": {
+                    "width": 1280,
+                    "height": 720,
+                    "previewUrl": "https://media.myshows.me/preview/shows/b0db236d9c2775e49fdedf341bd62c86",
+                    "blurhash": "LiNdL1xaIUa#~UR*%Maxx^s.xuRk",
+                    "hash": "b0db236d9c2775e49fdedf341bd62c86.jpg",
+                    "namespace": "shows",
+                    "source": "tvmaze"
+                },
+                "onlineCount": 0,
+                "promoUrl": "",
+                "category": "show",
+                "canRate": true,
+                "userShow": {
+                    "id": 0,
+                    "watchStatus": null,
+                    "rating": null,
+                    "isFavorite": false,
+                    "note": null,
+                    "watchCount": 0,
+                    "canReview": false,
+                    "reviewSeasons": null,
+                    "isIgnored": false
+                },
+                "genres": [
+                    {
+                        "id": 1,
+                        "title": "Комедия",
+                        "alias": "comedy"
+                    },
+                    {
+                        "id": 27,
+                        "title": "Военный",
+                        "alias": "military-war"
+                    }
+                ]
+            },
+            "watchStatus": "cancelled",
+            "rating": 2,
+            "watchCount": 1,
+            "totalEpisodes": 10,
+            "watchedEpisodes": 1,
+            "runtime": 25,
+            "totalHours": 4.2,
+            "watchedHours": 0.4
+        },
+        {
+            "show": {
+                "id": 529,
+                "title": "Собиратель душ",
+                "titleOriginal": "The Collector",
+                "alias": "the-collector",
+                "status": "Canceled/Ended",
+                "totalSeasons": 3,
+                "genreIds": [
+                    6,
+                    30,
+                    112
+                ],
+                "year": 2004,
+                "watching": 1316,
+                "voted": 518,
+                "rating": 3.48,
+                "images": [
+                    "bf65b7f4cdd5d34f646236289475b652.jpg"
+                ],
+                "image": "https://media.myshows.me/shows/small/b/f6/bf65b7f4cdd5d34f646236289475b652.jpg",
+                "imageInfo": {
+                    "width": 1280,
+                    "height": 720,
+                    "previewUrl": "https://media.myshows.me/preview/shows/bf65b7f4cdd5d34f646236289475b652",
+                    "blurhash": "L55h3|%M5QWB~Bx]Egj[jEt7kXof",
+                    "hash": "bf65b7f4cdd5d34f646236289475b652.jpg",
+                    "namespace": "shows",
+                    "source": "tvmaze"
+                },
+                "onlineCount": 0,
+                "promoUrl": "",
+                "category": "show",
+                "canRate": true,
+                "userShow": {
+                    "id": 0,
+                    "watchStatus": null,
+                    "rating": null,
+                    "isFavorite": false,
+                    "note": null,
+                    "watchCount": 0,
+                    "canReview": false,
+                    "reviewSeasons": null,
+                    "isIgnored": false
+                },
+                "genres": [
+                    {
+                        "id": 6,
+                        "title": "Драма",
+                        "alias": "drama"
+                    },
+                    {
+                        "id": 30,
+                        "title": "Ужасы",
+                        "alias": "horror-supernatural"
+                    },
+                    {
+                        "id": 112,
+                        "title": "Сверхъестественное",
+                        "alias": "supernatural"
+                    }
+                ]
+            },
+            "watchStatus": "cancelled",
+            "rating": 2,
+            "watchCount": 1,
+            "totalEpisodes": 40,
+            "watchedEpisodes": 5,
+            "runtime": 43,
+            "totalHours": 28.7,
+            "watchedHours": 3.6
+        },
+        {
+            "show": {
+                "id": 56231,
+                "title": "Хранители",
+                "titleOriginal": "Watchmen",
+                "alias": "watchmen",
+                "status": "Canceled/Ended",
+                "totalSeasons": 1,
+                "genreIds": [
+                    4,
+                    6,
+                    9
+                ],
+                "year": 2019,
+                "watching": 21307,
+                "voted": 7300,
+                "rating": 3.81,
+                "images": [
+                    "c6265ee075b4c108166006122cd896f3.jpg"
+                ],
+                "image": "https://media.myshows.me/shows/small/c/62/c6265ee075b4c108166006122cd896f3.jpg",
+                "imageInfo": {
+                    "width": 1920,
+                    "height": 1080,
+                    "previewUrl": "https://media.myshows.me/preview/shows/c6265ee075b4c108166006122cd896f3",
+                    "blurhash": "LKK^b_xo4;9i0WWE0QxV4[RnRo${",
+                    "hash": "c6265ee075b4c108166006122cd896f3.jpg",
+                    "namespace": "shows",
+                    "source": "tvmaze"
+                },
+                "onlineCount": 0,
+                "promoUrl": "https://hd.kinopoisk.ru/film/4317c8d86e54c5e685874b679a537809?utm_source=myshows\u0026utm_medium=paid_performance\u0026utm_campaign=watchmen\u0026utm_content=main_page_popular_promo\u0026utm_term=un_registered\u0026source=kinopoisk_paid_performance_myshows_watchmen_main_page_popular_promo_un_registered\u0026erid=4CQwVszH9pKvuPjp1qZ",
+                "category": "show",
+                "canRate": true,
+                "userShow": {
+                    "id": 0,
+                    "watchStatus": null,
+                    "rating": null,
+                    "isFavorite": false,
+                    "note": null,
+                    "watchCount": 0,
+                    "canReview": false,
+                    "reviewSeasons": null,
+                    "isIgnored": false
+                },
+                "genres": [
+                    {
+                        "id": 4,
+                        "title": "Боевик",
+                        "alias": "action"
+                    },
+                    {
+                        "id": 6,
+                        "title": "Драма",
+                        "alias": "drama"
+                    },
+                    {
+                        "id": 9,
+                        "title": "Фантастика",
+                        "alias": "sci-fi"
+                    }
+                ]
+            },
+            "watchStatus": "cancelled",
+            "rating": 2,
+            "watchCount": 1,
+            "totalEpisodes": 9,
+            "watchedEpisodes": 1,
+            "runtime": 56,
+            "totalHours": 8.4,
+            "watchedHours": 0.9
+        },
+        {
+            "show": {
+                "id": 792,
+                "title": "Ковбой Бибоп",
+                "titleOriginal": "Cowboy Bebop",
+                "alias": "cowboy-bebop",
+                "status": "Canceled/Ended",
+                "totalSeasons": 1,
+                "genreIds": [
+                    9,
+                    4,
+                    5,
+                    29
+                ],
+                "year": 2001,
+                "watching": 26098,
+                "voted": 11290,
+                "rating": 4.56,
+                "images": [
+                    "20efed08ca7a6f0e5dc5b6235f092569.jpg",
+                    "87eb104364c8dc564a20c54eadf1f5cf.jpg",
+                    "5556de3f46f0f6f3e664dcdb7240646b.jpg",
+                    "90dced9523e3e5f4b4bbbd65127eca91.jpg",
+                    "9315379b992e7efa1cedc33260b83828.jpg"
+                ],
+                "image": "https://media.myshows.me/shows/small/2/0e/20efed08ca7a6f0e5dc5b6235f092569.jpg",
+                "imageInfo": {
+                    "width": 1920,
+                    "height": 1080,
+                    "previewUrl": "https://media.myshows.me/preview/shows/20efed08ca7a6f0e5dc5b6235f092569",
+                    "blurhash": "LDE36i~pV?Dh00?HV[S7014o%N-;",
+                    "hash": "20efed08ca7a6f0e5dc5b6235f092569.jpg",
+                    "namespace": "shows",
+                    "source": "tvmaze"
+                },
+                "onlineCount": 0,
+                "promoUrl": "",
+                "category": "anime",
+                "canRate": true,
+                "userShow": {
+                    "id": 0,
+                    "watchStatus": null,
+                    "rating": null,
+                    "isFavorite": false,
+                    "note": null,
+                    "watchCount": 0,
+                    "canReview": false,
+                    "reviewSeasons": null,
+                    "isIgnored": false
+                },
+                "genres": [
+                    {
+                        "id": 9,
+                        "title": "Фантастика",
+                        "alias": "sci-fi"
+                    },
+                    {
+                        "id": 4,
+                        "title": "Боевик",
+                        "alias": "action"
+                    },
+                    {
+                        "id": 5,
+                        "title": "Приключения",
+                        "alias": "adventure"
+                    },
+                    {
+                        "id": 29,
+                        "title": "Аниме",
+                        "alias": "anime"
+                    }
+                ]
+            },
+            "watchStatus": "cancelled",
+            "rating": 1,
+            "watchCount": 1,
+            "totalEpisodes": 26,
+            "watchedEpisodes": 4,
+            "runtime": 22,
+            "totalHours": 9.5,
+            "watchedHours": 1.5
+        },
+        {
+            "show": {
+                "id": 18592,
+                "title": "Долина смерти",
+                "titleOriginal": "Death Valley",
+                "alias": "death-valley",
+                "status": "Canceled/Ended",
+                "totalSeasons": 1,
+                "genreIds": [
+                    1,
+                    26,
+                    30,
+                    25,
+                    10,
+                    9,
+                    28
+                ],
+                "year": 2011,
+                "watching": 5904,
+                "voted": 2793,
+                "rating": 3.74,
+                "images": [
+                    "a4f7e9ffe4eb0aa079782cb3a5a79510.jpg"
+                ],
+                "image": "https://media.myshows.me/shows/small/a/4f/a4f7e9ffe4eb0aa079782cb3a5a79510.jpg",
+                "imageInfo": {
+                    "width": 960,
+                    "height": 540,
+                    "previewUrl": "https://media.myshows.me/preview/shows/a4f7e9ffe4eb0aa079782cb3a5a79510",
+                    "blurhash": "LFCro|xt%LR%~B-pI;NG?Gt6%2sm",
+                    "hash": "a4f7e9ffe4eb0aa079782cb3a5a79510.jpg",
+                    "namespace": "shows",
+                    "source": "tvmaze"
+                },
+                "onlineCount": 0,
+                "promoUrl": "",
+                "category": "show",
+                "canRate": true,
+                "userShow": {
+                    "id": 0,
+                    "watchStatus": null,
+                    "rating": null,
+                    "isFavorite": false,
+                    "note": null,
+                    "watchCount": 0,
+                    "canReview": false,
+                    "reviewSeasons": null,
+                    "isIgnored": false
+                },
+                "genres": [
+                    {
+                        "id": 1,
+                        "title": "Комедия",
+                        "alias": "comedy"
+                    },
+                    {
+                        "id": 26,
+                        "title": "Триллер",
+                        "alias": "thriller"
+                    },
+                    {
+                        "id": 30,
+                        "title": "Ужасы",
+                        "alias": "horror-supernatural"
+                    },
+                    {
+                        "id": 25,
+                        "title": "Детектив",
+                        "alias": "mystery"
+                    },
+                    {
+                        "id": 10,
+                        "title": "Семейный",
+                        "alias": "family"
+                    },
+                    {
+                        "id": 9,
+                        "title": "Фантастика",
+                        "alias": "sci-fi"
+                    },
+                    {
+                        "id": 28,
+                        "title": "Криминал",
+                        "alias": "crime"
+                    }
+                ]
+            },
+            "watchStatus": "cancelled",
+            "rating": 1,
+            "watchCount": 1,
+            "totalEpisodes": 12,
+            "watchedEpisodes": 0,
+            "runtime": 22,
+            "totalHours": 4.4,
+            "watchedHours": 0
+        },
+        {
+            "show": {
+                "id": 67840,
+                "title": "Страна Лавкрафта",
+                "titleOriginal": "Lovecraft Country",
+                "alias": "lovecraft-country",
+                "status": "Canceled/Ended",
+                "totalSeasons": 1,
+                "genreIds": [
+                    6,
+                    30,
+                    25
+                ],
+                "year": 2020,
+                "watching": 9805,
+                "voted": 2973,
+                "rating": 3.26,
+                "images": [
+                    "a63173b999bcc7c41c6c82780c297c5a.jpg"
+                ],
+                "image": "https://media.myshows.me/shows/small/a/63/a63173b999bcc7c41c6c82780c297c5a.jpg",
+                "imageInfo": {
+                    "width": 1920,
+                    "height": 1080,
+                    "previewUrl": "https://media.myshows.me/preview/shows/a63173b999bcc7c41c6c82780c297c5a",
+                    "blurhash": "LGGFpi$i|IWC^1o1AEodV]$NJ,-8",
+                    "hash": "a63173b999bcc7c41c6c82780c297c5a.jpg",
+                    "namespace": "shows",
+                    "source": "tvmaze"
+                },
+                "onlineCount": 0,
+                "promoUrl": "",
+                "category": "show",
+                "canRate": true,
+                "userShow": {
+                    "id": 0,
+                    "watchStatus": null,
+                    "rating": null,
+                    "isFavorite": false,
+                    "note": null,
+                    "watchCount": 0,
+                    "canReview": false,
+                    "reviewSeasons": null,
+                    "isIgnored": false
+                },
+                "genres": [
+                    {
+                        "id": 6,
+                        "title": "Драма",
+                        "alias": "drama"
+                    },
+                    {
+                        "id": 30,
+                        "title": "Ужасы",
+                        "alias": "horror-supernatural"
+                    },
+                    {
+                        "id": 25,
+                        "title": "Детектив",
+                        "alias": "mystery"
+                    }
+                ]
+            },
+            "watchStatus": "cancelled",
+            "rating": 1,
+            "watchCount": 1,
+            "totalEpisodes": 10,
+            "watchedEpisodes": 2,
+            "runtime": 60,
+            "totalHours": 10,
+            "watchedHours": 2
+        },
+        {
+            "show": {
+                "id": 5256,
+                "title": "Одиннадцатый час",
+                "titleOriginal": "Eleventh Hour (UK)",
+                "alias": "eleventh-hour-uk",
+                "status": "Canceled/Ended",
+                "totalSeasons": 1,
+                "genreIds": [
+                    6,
+                    28,
+                    26
+                ],
+                "year": 2006,
+                "watching": 63,
+                "voted": 0,
+                "rating": 0,
+                "images": [
+                    "f56273ab155d65c5f4f12cb46f96792b.jpg"
+                ],
+                "image": "https://media.myshows.me/shows/small/f/56/f56273ab155d65c5f4f12cb46f96792b.jpg",
+                "imageInfo": {
+                    "width": 1920,
+                    "height": 1080,
+                    "previewUrl": "https://media.myshows.me/preview/shows/f56273ab155d65c5f4f12cb46f96792b",
+                    "blurhash": "LQINg7Iq4UxuFfxr9vt4a0sp%1RQ",
+                    "hash": "f56273ab155d65c5f4f12cb46f96792b.jpg",
+                    "namespace": "shows",
+                    "source": "tvmaze"
+                },
+                "onlineCount": 0,
+                "promoUrl": "",
+                "category": "show",
+                "canRate": true,
+                "userShow": {
+                    "id": 0,
+                    "watchStatus": null,
+                    "rating": null,
+                    "isFavorite": false,
+                    "note": null,
+                    "watchCount": 0,
+                    "canReview": false,
+                    "reviewSeasons": null,
+                    "isIgnored": false
+                },
+                "genres": [
+                    {
+                        "id": 6,
+                        "title": "Драма",
+                        "alias": "drama"
+                    },
+                    {
+                        "id": 28,
+                        "title": "Криминал",
+                        "alias": "crime"
+                    },
+                    {
+                        "id": 26,
+                        "title": "Триллер",
+                        "alias": "thriller"
+                    }
+                ]
+            },
+            "watchStatus": "cancelled",
+            "rating": 0,
+            "watchCount": 1,
+            "totalEpisodes": 4,
+            "watchedEpisodes": 1,
+            "runtime": 90,
+            "totalHours": 6,
+            "watchedHours": 1.5
+        },
+        {
+            "show": {
+                "id": 1236,
+                "title": "Святой дозор",
+                "titleOriginal": "Miracles",
+                "alias": "miracles",
+                "status": "Canceled/Ended",
+                "totalSeasons": 1,
+                "genreIds": [
+                    9,
+                    6
+                ],
+                "year": 2003,
+                "watching": 1293,
+                "voted": 678,
+                "rating": 3.47,
+                "images": [
+                    "8df572305533f3e228e6fa2043ca68ec.jpg",
+                    "0236259fbcef896d5cc6950645f49cd4.jpg",
+                    "0104c92220109b7a8e778b10c68edf8b.jpg",
+                    "b9527df9bb56bde200640b5abd883fb4.jpg"
+                ],
+                "image": "https://media.myshows.me/shows/small/8/df/8df572305533f3e228e6fa2043ca68ec.jpg",
+                "imageInfo": {
+                    "width": 1920,
+                    "height": 1080,
+                    "previewUrl": "https://media.myshows.me/preview/shows/8df572305533f3e228e6fa2043ca68ec",
+                    "blurhash": "LJFiP;M{?wxur:x]IUofIUxuIURk",
+                    "hash": "8df572305533f3e228e6fa2043ca68ec.jpg",
+                    "namespace": "shows",
+                    "source": "tvmaze"
+                },
+                "onlineCount": 0,
+                "promoUrl": "",
+                "category": "show",
+                "canRate": true,
+                "userShow": {
+                    "id": 0,
+                    "watchStatus": null,
+                    "rating": null,
+                    "isFavorite": false,
+                    "note": null,
+                    "watchCount": 0,
+                    "canReview": false,
+                    "reviewSeasons": null,
+                    "isIgnored": false
+                },
+                "genres": [
+                    {
+                        "id": 9,
+                        "title": "Фантастика",
+                        "alias": "sci-fi"
+                    },
+                    {
+                        "id": 6,
+                        "title": "Драма",
+                        "alias": "drama"
+                    }
+                ]
+            },
+            "watchStatus": "cancelled",
+            "rating": 0,
+            "watchCount": 1,
+            "totalEpisodes": 13,
+            "watchedEpisodes": 1,
+            "runtime": 43,
+            "totalHours": 9.3,
+            "watchedHours": 0.7
+        },
+        {
+            "show": {
+                "id": 2195,
+                "title": "Мутанты Икс",
+                "titleOriginal": "Mutant X",
+                "alias": "mutant-x",
+                "status": "Canceled/Ended",
+                "totalSeasons": 3,
+                "genreIds": [
+                    4,
+                    9,
+                    5
+                ],
+                "year": 2001,
+                "watching": 1227,
+                "voted": 492,
+                "rating": 3.52,
+                "images": [
+                    "81673376fbce4195b94eb6549e0f39d9.jpg",
+                    "8ae67dc2366ea3c28123e70732221c64.jpg",
+                    "341dcd4b5f5803cc39753a305a5bbc10.jpg",
+                    "930324a9e2f5b305681364107f00d156.jpg",
+                    "508e73dc20408aee149f8b0078496b37.jpg"
+                ],
+                "image": "https://media.myshows.me/shows/small/8/16/81673376fbce4195b94eb6549e0f39d9.jpg",
+                "imageInfo": {
+                    "width": 1280,
+                    "height": 720,
+                    "previewUrl": "https://media.myshows.me/preview/shows/81673376fbce4195b94eb6549e0f39d9",
+                    "blurhash": "LUHnvUxR0-RUcEi_VtM|0NW?jDn%",
+                    "hash": "81673376fbce4195b94eb6549e0f39d9.jpg",
+                    "namespace": "shows",
+                    "source": "tvmaze"
+                },
+                "onlineCount": 0,
+                "promoUrl": "",
+                "category": "show",
+                "canRate": true,
+                "userShow": {
+                    "id": 0,
+                    "watchStatus": null,
+                    "rating": null,
+                    "isFavorite": false,
+                    "note": null,
+                    "watchCount": 0,
+                    "canReview": false,
+                    "reviewSeasons": null,
+                    "isIgnored": false
+                },
+                "genres": [
+                    {
+                        "id": 4,
+                        "title": "Боевик",
+                        "alias": "action"
+                    },
+                    {
+                        "id": 9,
+                        "title": "Фантастика",
+                        "alias": "sci-fi"
+                    },
+                    {
+                        "id": 5,
+                        "title": "Приключения",
+                        "alias": "adventure"
+                    }
+                ]
+            },
+            "watchStatus": "cancelled",
+            "rating": 0,
+            "watchCount": 1,
+            "totalEpisodes": 66,
+            "watchedEpisodes": 2,
+            "runtime": 43,
+            "totalHours": 47.3,
+            "watchedHours": 1.4
+        },
+        {
+            "show": {
+                "id": 48044,
+                "title": "Ночной администратор",
+                "titleOriginal": "The Night Manager",
+                "alias": "the-night-manager",
+                "status": "Returning Series",
+                "totalSeasons": 2,
+                "genreIds": [
+                    6,
+                    105,
+                    26
+                ],
+                "year": 2016,
+                "watching": 52807,
+                "voted": 19808,
+                "rating": 4.11,
+                "images": [
+                    "5c98a6811aba5ad59844a3c257ec167b.jpg"
+                ],
+                "image": "https://media.myshows.me/shows/small/5/c9/5c98a6811aba5ad59844a3c257ec167b.jpg",
+                "imageInfo": {
+                    "width": 1920,
+                    "height": 1080,
+                    "previewUrl": "https://media.myshows.me/preview/shows/5c98a6811aba5ad59844a3c257ec167b",
+                    "blurhash": "LoI;CY-nR%s:~UxZjFflS#oJoJW=",
+                    "hash": "5c98a6811aba5ad59844a3c257ec167b.jpg",
+                    "namespace": "shows",
+                    "source": "tvmaze"
+                },
+                "onlineCount": 0,
+                "promoUrl": "",
+                "category": "show",
+                "canRate": true,
+                "userShow": {
+                    "id": 0,
+                    "watchStatus": null,
+                    "rating": null,
+                    "isFavorite": false,
+                    "note": null,
+                    "watchCount": 0,
+                    "canReview": false,
+                    "reviewSeasons": null,
+                    "isIgnored": false
+                },
+                "genres": [
+                    {
+                        "id": 6,
+                        "title": "Драма",
+                        "alias": "drama"
+                    },
+                    {
+                        "id": 105,
+                        "title": "Шпионский",
+                        "alias": "spy-espionage"
+                    },
+                    {
+                        "id": 26,
+                        "title": "Триллер",
+                        "alias": "thriller"
+                    }
+                ]
+            },
+            "watchStatus": "cancelled",
+            "rating": 0,
+            "watchCount": 1,
+            "totalEpisodes": 12,
+            "watchedEpisodes": 6,
+            "runtime": 60,
+            "totalHours": 12,
+            "watchedHours": 6
+        }
+    ],
+    "extensions": {
+        "DurationPureSQL": 144
+    }
+}

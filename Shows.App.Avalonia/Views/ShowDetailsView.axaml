@@ -1,0 +1,230 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Shows.App.Avalonia.ViewModels"
+             xmlns:local="using:Shows.App.Avalonia"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:Class="Shows.App.Avalonia.Views.ShowDetailsView"
+             x:DataType="vm:ShowDetailsViewModel">
+
+    <!-- The show details page (SPEC F5): header, external links, category picker, the season/episode grid
+         with watched toggles, the IMDb/TVmaze disagreements, and the specials section. Rendered entirely
+         from local rows — opening it never fetches (F5). -->
+    <!-- The inset lives on the content as a Margin, NOT as ScrollViewer.Padding. Avalonia's ScrollViewer
+         does not reliably include its own bottom padding in the scrollable extent, so the last element was
+         clipped by the padding amount when scrolled to the bottom (independent of any child). A Margin on
+         the content is part of the measured extent, so it always scrolls fully into view. -->
+    <ScrollViewer>
+        <StackPanel Spacing="12" Margin="16">
+            <ProgressBar IsIndeterminate="True" Height="6" HorizontalAlignment="Center" Width="120"
+                         IsVisible="{Binding IsBusy}" />
+
+            <!-- Status / result banner (sync, localized-title fetch, errors). Shown at the top so it is
+                 visible regardless of whether the show has a description. -->
+            <Border Classes="section" Padding="12,8"
+                    IsVisible="{Binding StatusMessage, Converter={StaticResource IsNotNull}}">
+                <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap"
+                           Foreground="{DynamicResource TextSecondaryBrush}" />
+            </Border>
+
+            <Border Classes="section" IsVisible="{Binding IsBusy, Converter={StaticResource InvertBool}}">
+                <Grid ColumnDefinitions="150,*,Auto" ColumnSpacing="16">
+                    <Image Grid.Column="0" local:ImageBehavior.Url="{Binding PosterUrl}"
+                           IsVisible="{Binding HasPoster}"
+                           Width="150" Height="225" Stretch="UniformToFill" VerticalAlignment="Top" />
+                    <Border Grid.Column="0" Classes="poster" Width="150" Height="225" VerticalAlignment="Top"
+                            IsVisible="{Binding HasPoster, Converter={StaticResource InvertBool}}" />
+                    <StackPanel Grid.Column="1" Spacing="4">
+                        <TextBlock Classes="title" Text="{Binding PrimaryTitle}" TextWrapping="Wrap" />
+                        <TextBlock Classes="subtitle" Text="{Binding SecondaryTitle}" IsVisible="{Binding HasSecondaryTitle}" TextWrapping="Wrap" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Border Classes="chip" IsVisible="{Binding StatusText, Converter={StaticResource IsNotNull}}">
+                                <TextBlock Classes="chip" Text="{Binding StatusText}" />
+                            </Border>
+                            <Border Classes="chip" IsVisible="{Binding RatingText, Converter={StaticResource IsNotNull}}">
+                                <TextBlock Classes="chip" Text="{Binding RatingText, StringFormat='★ {0}'}" />
+                            </Border>
+                        </StackPanel>
+                        <TextBlock Classes="subtitle" Text="{Binding GenresText}" TextWrapping="Wrap" />
+                        <TextBlock Classes="subtitle" Text="{Binding NetworkText}" IsVisible="{Binding HasNetwork}" />
+                        <TextBlock Classes="subtitle" Text="{Binding AirDateText}" IsVisible="{Binding HasAirDate}" />
+                        <ProgressBar Value="{Binding ProgressFraction}" Minimum="0" Maximum="1" IsVisible="{Binding HasProgress}" />
+                        <TextBlock Classes="subtitle" Text="{Binding ProgressText}" />
+                        <TextBlock Text="Some specials unwatched" FontSize="12" IsVisible="{Binding HasUnwatchedSpecials}" Opacity="0.6" />
+                    </StackPanel>
+                    <!-- The two live-fetch actions sit in the header's top-right corner (the empty space
+                         beside the poster) rather than in the link row below. Sync first, Fetch below it.
+                         Both are single-show fetches (no lease); they stay out of the link row so the row
+                         holds only the external-site links. -->
+                    <StackPanel Grid.Column="2" Spacing="8" Width="150" VerticalAlignment="Top" HorizontalAlignment="Right">
+                        <Button Content="Sync" Command="{Binding SyncCommand}" Classes="secondary" HorizontalAlignment="Stretch" />
+                        <Button Content="Titles" Command="{Binding FetchLocalizedTitlesCommand}" Classes="secondary" HorizontalAlignment="Stretch" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- External links built from ids at render (SPEC P5) — no URL column exists. -->
+            <StackPanel Orientation="Horizontal" Spacing="12"
+                        IsVisible="{Binding IsBusy, Converter={StaticResource InvertBool}}">
+                <Button Content="TVmaze" Command="{Binding OpenTvmazeLinkCommand}" Classes="secondary" />
+                <Button Content="IMDb" Command="{Binding OpenImdbLinkCommand}" Classes="secondary"
+                        IsVisible="{Binding HasImdbLink}" />
+                <Button Content="Official site" Command="{Binding OpenOfficialSiteLinkCommand}" Classes="secondary"
+                        IsVisible="{Binding HasOfficialSiteLink}" />
+            </StackPanel>
+
+            <!-- Your rating (1-10): the user's own opinion, distinct from TVmaze's catalog rating shown as
+                 the ★ chip in the header. A row of ten clickable stars; a star fills when its position is at
+                 or below UserRating (StarFilledConverter). Clicking a star sets that value; clicking the star
+                 at the CURRENT rating clears it. Persists through SetShowUserRatingUseCase. -->
+            <Border Classes="section" IsVisible="{Binding IsBusy, Converter={StaticResource InvertBool}}">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <TextBlock Classes="sectionHeader" Text="Your rating" VerticalAlignment="Center" />
+                    <StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                        <TextBlock Classes="star" Classes.fill="{Binding UserRating, Converter={StaticResource StarFilled}, ConverterParameter=1}" Tag="1" PointerPressed="OnSetRating" />
+                        <TextBlock Classes="star" Classes.fill="{Binding UserRating, Converter={StaticResource StarFilled}, ConverterParameter=2}" Tag="2" PointerPressed="OnSetRating" />
+                        <TextBlock Classes="star" Classes.fill="{Binding UserRating, Converter={StaticResource StarFilled}, ConverterParameter=3}" Tag="3" PointerPressed="OnSetRating" />
+                        <TextBlock Classes="star" Classes.fill="{Binding UserRating, Converter={StaticResource StarFilled}, ConverterParameter=4}" Tag="4" PointerPressed="OnSetRating" />
+                        <TextBlock Classes="star" Classes.fill="{Binding UserRating, Converter={StaticResource StarFilled}, ConverterParameter=5}" Tag="5" PointerPressed="OnSetRating" />
+                        <TextBlock Classes="star" Classes.fill="{Binding UserRating, Converter={StaticResource StarFilled}, ConverterParameter=6}" Tag="6" PointerPressed="OnSetRating" />
+                        <TextBlock Classes="star" Classes.fill="{Binding UserRating, Converter={StaticResource StarFilled}, ConverterParameter=7}" Tag="7" PointerPressed="OnSetRating" />
+                        <TextBlock Classes="star" Classes.fill="{Binding UserRating, Converter={StaticResource StarFilled}, ConverterParameter=8}" Tag="8" PointerPressed="OnSetRating" />
+                        <TextBlock Classes="star" Classes.fill="{Binding UserRating, Converter={StaticResource StarFilled}, ConverterParameter=9}" Tag="9" PointerPressed="OnSetRating" />
+                        <TextBlock Classes="star" Classes.fill="{Binding UserRating, Converter={StaticResource StarFilled}, ConverterParameter=10}" Tag="10" PointerPressed="OnSetRating" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Category change (issue 8 / improvement 15): three always-visible buttons; the button for
+                 the CURRENT category is disabled. Finished is never offered (SPEC R5). -->
+            <Border Classes="section" IsVisible="{Binding IsBusy, Converter={StaticResource InvertBool}}">
+                <StackPanel Spacing="8">
+                    <TextBlock Classes="sectionHeader" Text="{Binding CategoryText, StringFormat='Category: {0}'}" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="Started" Command="{Binding MoveToStartedCommand}"
+                                IsEnabled="{Binding IsStarted, Converter={StaticResource InvertBool}}" Classes="secondary" />
+                        <Button Content="Later" Command="{Binding MoveToLaterCommand}"
+                                IsEnabled="{Binding IsLater, Converter={StaticResource InvertBool}}" Classes="secondary" />
+                        <Button Content="Cancelled" Command="{Binding MoveToCancelledCommand}"
+                                IsEnabled="{Binding IsCancelled, Converter={StaticResource InvertBool}}" Classes="secondary" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <Border Classes="section" IsVisible="{Binding HasDescription}">
+                <StackPanel Spacing="6">
+                    <TextBlock Classes="sectionHeader" Text="Overview" />
+                    <TextBlock Text="{Binding Description}" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+
+            <!-- The alternates the "Fetch localized titles" button returned (step 7.5), one per line, in
+                 their own labelled section so they read as reference data, not part of the overview. -->
+            <Border Classes="section" IsVisible="{Binding AkasText, Converter={StaticResource IsNotNull}}">
+                <StackPanel Spacing="6">
+                    <TextBlock Classes="sectionHeader" Text="Alternative titles" />
+                    <TextBlock Text="{Binding AkasText}" FontSize="12" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                </StackPanel>
+            </Border>
+
+            <!-- Season/episode grid (SPEC F5). Seasons are always expanded and non-collapsible here
+                 (improvement 11), sorted newest-first. Regulars only — specials are the bottom section. -->
+            <Border Classes="section">
+                <ItemsControl ItemsSource="{Binding Seasons}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:SeasonGroupViewModel">
+                            <StackPanel Spacing="2">
+                                <TextBlock Classes="sectionHeader" Text="{Binding Header}" Margin="0,4,0,2" />
+                                <ItemsControl ItemsSource="{Binding Episodes}" Margin="6,0,0,0">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:EpisodeRowViewModel">
+                                            <Border Classes="row">
+                                                <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="8"
+                                                      Background="Transparent" PointerPressed="OnToggleEpisode">
+                                                    <CheckBox Grid.Column="0" IsChecked="{Binding IsWatched}"
+                                                              IsHitTestVisible="False" />
+                                                    <TextBlock Grid.Column="1" Text="{Binding NumberText}" VerticalAlignment="Center"
+                                                               FontWeight="Bold" FontSize="12" />
+                                                    <StackPanel Grid.Column="2" Spacing="0">
+                                                        <TextBlock Text="{Binding PrimaryTitle}" FontSize="13" TextWrapping="Wrap" />
+                                                        <TextBlock Text="{Binding SecondaryTitle}" FontSize="11"
+                                                                   IsVisible="{Binding HasSecondaryTitle}" Opacity="0.6" />
+                                                        <TextBlock Text="{Binding AirDateText}" FontSize="11"
+                                                                   IsVisible="{Binding AirDateText, Converter={StaticResource IsNotNull}}" Opacity="0.6" />
+                                                    </StackPanel>
+                                                    <TextBlock Grid.Column="3" Text="special" FontSize="11" VerticalAlignment="Center"
+                                                               IsVisible="{Binding IsSpecial}" Opacity="0.6" />
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Border>
+
+            <!-- Specials (improvement 6 / ADR-034): insignificant specials only, shown here in a
+                 dedicated section (never inline in the season grid). They keep their watch toggle
+                 (SPEC R4 only forbids auto-marking). Placed above the disagreements block so the
+                 watchable content reads before the metadata noise. -->
+            <Border Classes="section" IsVisible="{Binding HasSpecials}">
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="sectionHeader" Text="Specials" />
+                    <ItemsControl ItemsSource="{Binding Specials}" Margin="6,0,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:EpisodeRowViewModel">
+                                <Border Classes="row">
+                                    <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="8"
+                                          Background="Transparent" PointerPressed="OnToggleEpisode">
+                                        <CheckBox Grid.Column="0" IsChecked="{Binding IsWatched}"
+                                                  IsHitTestVisible="False" />
+                                        <TextBlock Grid.Column="1" Text="{Binding NumberText}" VerticalAlignment="Center"
+                                                   FontWeight="Bold" FontSize="12" />
+                                        <StackPanel Grid.Column="2" Spacing="0">
+                                            <TextBlock Text="{Binding PrimaryTitle}" FontSize="13" TextWrapping="Wrap" />
+                                            <TextBlock Text="{Binding SecondaryTitle}" FontSize="11"
+                                                       IsVisible="{Binding HasSecondaryTitle}" Opacity="0.6" />
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="3" Text="special" FontSize="11" VerticalAlignment="Center"
+                                                   IsVisible="{Binding IsSpecial}" Opacity="0.6" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- TVmaze/IMDb disagreements (step 7.3 / ADR-031), grouped per improvement 9. The episode-set
+                 differences are major and always shown; the high-volume field differences are collapsed
+                 under a View All toggle. -->
+            <Border Classes="section" IsVisible="{Binding HasMismatches}">
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="sectionHeader" Text="Episode data differences (IMDb vs TVmaze)" />
+                    <TextBlock Text="{Binding MajorMismatchText}" FontSize="12" TextWrapping="Wrap"
+                               IsVisible="{Binding HasMajorMismatches}" Opacity="0.7" />
+                    <TextBlock Text="{Binding MinorMismatchSummary}" FontSize="12" TextWrapping="Wrap"
+                               IsVisible="{Binding ShowMinorSummary}" Opacity="0.7" />
+                    <TextBlock Text="{Binding MinorMismatchText}" FontSize="12" TextWrapping="Wrap"
+                               IsVisible="{Binding ShowMinorList}" Opacity="0.7" />
+                    <Button Content="{Binding ToggleMismatchesText}" Command="{Binding ToggleMismatchesCommand}"
+                            IsVisible="{Binding CanToggleMismatches}" Classes="secondary"
+                            HorizontalAlignment="Left" FontSize="12" />
+                </StackPanel>
+            </Border>
+
+
+            <!-- Untrack (issue 8 / improvement 15): the destructive action sits at the end of the scrolling
+                 content, so it scrolls with the page rather than overlaying it. A logical delete (ADR-024) —
+                 the watched state is preserved for a later re-add. -->
+            <Button Content="Untrack" Command="{Binding UntrackCommand}" Classes="danger"
+                HorizontalAlignment="Stretch" Margin="0,8,0,0"
+                IsVisible="{Binding IsBusy, Converter={StaticResource InvertBool}}" FontSize="12"  />
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

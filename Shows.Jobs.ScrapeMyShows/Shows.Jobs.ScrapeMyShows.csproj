@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- ARCHITECTURE.md §3 Shows.Jobs.*: step 0.1 only puts the project in the graph. Step 0.7 owns OutputType,
+    Program.cs and the Infrastructure reference together, since an Exe with no entry point does not build.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!-- AssemblyName drives log/<appname>.log via Assembly.GetName().Name (ARCHITECTURE.md §7). -->
+    <AssemblyName>ScrapeMyShows</AssemblyName>
+    <RootNamespace>Shows.Jobs.ScrapeMyShows</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Shows.Infrastructure\Shows.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

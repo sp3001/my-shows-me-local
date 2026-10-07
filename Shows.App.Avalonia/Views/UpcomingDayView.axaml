@@ -1,0 +1,24 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Shows.App.Avalonia.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:Class="Shows.App.Avalonia.Views.UpcomingDayView"
+             x:DataType="vm:UpcomingDayViewModel">
+
+    <!-- One day inside an Upcoming block (improvement 4 follow-up): the date header ("15 October 2026" with
+         the weekday after it on the same line in a smaller font), a thin rule, then the episode rows airing
+         that day (indented so they read as children of the date). Rows render through the ViewLocator
+         (UpcomingEpisodeRowViewModel -> UpcomingEpisodeRowView). -->
+    <StackPanel Spacing="2" Margin="0,14,0,4">
+        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <TextBlock Text="{Binding DateText}" FontSize="15" FontWeight="Bold"
+                       Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding WeekdayText}" FontSize="11" Opacity="0.6"
+                       VerticalAlignment="Center" IsVisible="{Binding HasWeekday}" />
+        </StackPanel>
+        <Separator Margin="0,2,0,4" />
+        <ItemsControl ItemsSource="{Binding Rows}" Margin="20,0,0,0" />
+    </StackPanel>
+</UserControl>

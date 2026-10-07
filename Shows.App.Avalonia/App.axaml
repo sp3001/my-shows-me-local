@@ -1,0 +1,41 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Shows.App.Avalonia.App"
+             xmlns:local="using:Shows.App.Avalonia"
+             xmlns:conv="using:Shows.App.Avalonia.Converters"
+             RequestedThemeVariant="Default">
+             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+
+    <Application.DataTemplates>
+        <local:ViewLocator />
+    </Application.DataTemplates>
+
+    <Application.Resources>
+        <!-- A single ResourceDictionary (Application.Resources accepts only one assignment) holding both
+             the value converters and the merged design tokens.
+
+             Converters are registered app-wide so any view can reference them as StaticResource without
+             re-declaring them per page (the MAUI App.xaml equivalent). The merged Theme.axaml dictionary
+             carries the palette/surface/text/accent tokens; each has a light and dark value that follows
+             the active theme variant, resolved by name via {DynamicResource}. -->
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="/Styles/Theme.axaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <conv:InvertBoolConverter x:Key="InvertBool" />
+            <conv:StringNotEmptyConverter x:Key="IsNotNull" />
+            <conv:StringEmptyConverter x:Key="IsNullOrEmpty" />
+            <conv:CategorySelectedColorConverter x:Key="CategorySelectedColor" />
+            <conv:StarFilledConverter x:Key="StarFilled" />
+        </ResourceDictionary>
+    </Application.Resources>
+
+    <Application.Styles>
+        <FluentTheme />
+
+        <!-- The app's component styles (cards, buttons, inputs, tabs, chips, typography). Loaded after
+             FluentTheme so the class-based overrides win. Additive only — no behaviour changes. -->
+        <StyleInclude Source="/Styles/Controls.axaml" />
+    </Application.Styles>
+</Application>

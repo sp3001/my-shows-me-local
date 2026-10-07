@@ -1,0 +1,77 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Shows.App.Avalonia.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:Class="Shows.App.Avalonia.Views.SearchDetailsView"
+             x:DataType="vm:SearchDetailsViewModel">
+
+    <!--
+      Details for an untracked search result (user-issues 3 / improvement 10). The show has no
+      tracked_show id yet, so this page reads the catalog record by TVmaze id and reuses ShowCardView —
+      the same view the search list uses — so the Start / Later add buttons and the R3 title rule are not
+      duplicated. The ContentControl bound to Card resolves to ShowCardView via the app-wide ViewLocator.
+
+      The inset lives on the content as a Margin, NOT as ScrollViewer.Padding. Avalonia's ScrollViewer does
+      not reliably include its own bottom padding in the scrollable extent, so the last element was cut off
+      and the scrollbar mis-measured (same fix as the tracked-details page). As a content Margin it is part
+      of the measured extent, so the page always scrolls fully into view.
+    -->
+    <ScrollViewer>
+        <StackPanel Spacing="10" Margin="12">
+            <ProgressBar IsIndeterminate="True" Height="6" HorizontalAlignment="Center" Width="120"
+                         IsVisible="{Binding IsBusy}" />
+
+            <TextBlock Text="{Binding StatusMessage}" IsVisible="{Binding IsEmpty}" Opacity="0.6" TextWrapping="Wrap" />
+
+            <!-- The shared card carries the title, meta, network/country and the synopsis (DescriptionText),
+                 so the overview is NOT repeated here (user-issues 19 follow-up: it was duplicated). -->
+            <ContentControl Content="{Binding Card}" IsVisible="{Binding IsEmpty, Converter={StaticResource InvertBool}}" />
+
+            <!-- External links built from ids at render (SPEC P5, improvement 20) — no URL column exists.
+                 Same buttons as the tracked-details page; the IMDb one hides when the show has no tt id. -->
+            <StackPanel Orientation="Horizontal" Spacing="12"
+                        IsVisible="{Binding IsEmpty, Converter={StaticResource InvertBool}}">
+                <Button Content="TVmaze" Command="{Binding OpenTvmazeLinkCommand}" Classes="secondary" />
+                <Button Content="IMDb" Command="{Binding OpenImdbLinkCommand}" Classes="secondary"
+                        IsVisible="{Binding HasImdbLink}" />
+                <Button Content="Official site" Command="{Binding OpenOfficialSiteLinkCommand}" Classes="secondary"
+                        IsVisible="{Binding HasOfficialSiteLink}" />
+            </StackPanel>
+
+            <!-- Episode list (user-issues 19 follow-up): read-only (an untracked show has no watch state).
+                 Always fetched live for the full guide, for both Discovery and Search hits. -->
+            <Border Classes="section" IsVisible="{Binding HasSeasons}">
+                <ItemsControl ItemsSource="{Binding Seasons}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:CatalogSeasonViewModel">
+                            <StackPanel Spacing="2">
+                                <TextBlock Classes="sectionHeader" Text="{Binding Header}" Margin="0,4,0,2" />
+                                <ItemsControl ItemsSource="{Binding Episodes}" Margin="6,0,0,0">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:CatalogEpisodeViewModel">
+                                            <Border Classes="row">
+                                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                                    <TextBlock Grid.Column="0" Text="{Binding NumberText}"
+                                                               VerticalAlignment="Center" FontWeight="Bold" FontSize="12"
+                                                               MinWidth="44" />
+                                                    <StackPanel Grid.Column="1" Spacing="0">
+                                                        <TextBlock Text="{Binding Title}" FontSize="13" TextWrapping="Wrap" />
+                                                        <TextBlock Text="{Binding AirDateText}" FontSize="11"
+                                                                   IsVisible="{Binding AirDateText, Converter={StaticResource IsNotNull}}"
+                                                                   Opacity="0.6" />
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

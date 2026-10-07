@@ -1,0 +1,145 @@
+root = true
+
+# ---------------------------------------------------------------------------
+# Everything below applies to the whole repo. Directory.Build.props turns on
+# EnforceCodeStyleInBuild and TreatWarningsAsErrors, so an IDE-only style rule
+# here is a build break -- these settings are the build's settings.
+# ---------------------------------------------------------------------------
+
+[*]
+charset = utf-8
+end_of_line = crlf
+insert_final_newline = true
+indent_style = space
+indent_size = 4
+trim_trailing_whitespace = true
+
+[*.{json,yml,yaml,props,targets,sln,md,txt,http}]
+indent_size = 2
+
+[*.{md,json}]
+trim_trailing_whitespace = false
+
+[*.cs]
+# ---------------------------------------------------------------------------
+# Language conventions
+# ---------------------------------------------------------------------------
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+csharp_using_directive_placement = outside_namespace:error
+
+csharp_prefer_braces = true:error
+csharp_prefer_simple_using_statement = true:suggestion
+csharp_prefer_simple_default_expression = true:suggestion
+csharp_style_namespace_declarations = file_scoped:error
+csharp_style_prefer_method_group_conversion = true:silent
+csharp_style_prefer_top_level_statements = true:silent
+csharp_style_expression_bodied_methods = when_on_single_line:suggestion
+csharp_style_expression_bodied_properties = true:suggestion
+csharp_style_expression_bodied_accessors = true:suggestion
+csharp_style_in_mobile = false:silent
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_var_elsewhere = false:suggestion
+csharp_object_instantiation_prefer_explicit_type = false:suggestion
+dotnet_style_predefined_type_for_locals_parameters_members = true:error
+dotnet_style_predefined_type_for_member_access = true:error
+dotnet_style_qualification_for_field = false:error
+dotnet_style_qualification_for_property = false:error
+dotnet_style_qualification_for_method = false:error
+dotnet_style_qualification_for_event = false:error
+dotnet_style_object_initializer = true:suggestion
+dotnet_style_collection_initializer = true:suggestion
+dotnet_style_prefer_auto_properties = true:suggestion
+dotnet_style_prefer_conditional_expression_over_assignment = true:silent
+dotnet_style_prefer_conditional_expression_over_return = true:silent
+dotnet_style_explicit_tuple_names = true:error
+dotnet_style_coalesce_expression = true:error
+dotnet_style_null_propagation = true:error
+dotnet_style_prefer_is_null_check_over_reference_equality_method = true:suggestion
+
+# ---------------------------------------------------------------------------
+# Naming
+# ---------------------------------------------------------------------------
+dotnet_naming_rule.types_should_be_pascal_case.symbols = types
+dotnet_naming_rule.types_should_be_pascal_case.style = pascal_case
+dotnet_naming_rule.types_should_be_pascal_case.severity = error
+dotnet_naming_symbols.types.applicable_kinds = class,struct,interface,enum,delegate
+dotnet_naming_style.pascal_case.capitalization = pascal_case
+
+dotnet_naming_rule.private_fields_should_be_camel_case.symbols = private_fields
+dotnet_naming_rule.private_fields_should_be_camel_case.style = underscore_camel_case
+dotnet_naming_rule.private_fields_should_be_camel_case.severity = error
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+dotnet_naming_style.underscore_camel_case.required_prefix = _
+dotnet_naming_style.underscore_camel_case.capitalization = camel_case
+
+dotnet_naming_rule.constants_should_be_pascal_case.symbols = constants
+dotnet_naming_rule.constants_should_be_pascal_case.style = pascal_case
+dotnet_naming_rule.constants_should_be_pascal_case.severity = error
+dotnet_naming_symbols.constants.applicable_kinds = field
+dotnet_naming_symbols.constants.required_modifiers = const
+
+# ---------------------------------------------------------------------------
+# Analyzer noise that is not worth a build error in a personal app.
+# Each of these is a deliberate, reviewed downgrade -- not a wildcard.
+# ---------------------------------------------------------------------------
+
+# CA1024/CA1707 etc. are design opinions, not defects.
+dotnet_diagnostic.CA1024.severity = none
+dotnet_diagnostic.CA1031.severity = none
+dotnet_diagnostic.CA1034.severity = none
+dotnet_diagnostic.CA1054.severity = none
+dotnet_diagnostic.CA1055.severity = none
+dotnet_diagnostic.CA1056.severity = none
+dotnet_diagnostic.CA1062.severity = none
+dotnet_diagnostic.CA1305.severity = none
+dotnet_diagnostic.CA1508.severity = none
+dotnet_diagnostic.CA1707.severity = none
+dotnet_diagnostic.CA1710.severity = none
+dotnet_diagnostic.CA1711.severity = none
+dotnet_diagnostic.CA1716.severity = none
+dotnet_diagnostic.CA1812.severity = none
+dotnet_diagnostic.CA1819.severity = none
+dotnet_diagnostic.CA1822.severity = suggestion
+dotnet_diagnostic.CA1848.severity = none
+dotnet_diagnostic.CA1861.severity = suggestion
+dotnet_diagnostic.CA1863.severity = none
+dotnet_diagnostic.CA2007.severity = none
+dotnet_diagnostic.CA2201.severity = none
+dotnet_diagnostic.CA2227.severity = none
+
+# Public API surface: these projects are not libraries consumed by anyone else,
+# so "seal type" / "make member static" / missing-XML-doc are churn, not safety.
+dotnet_diagnostic.CA1010.severity = none
+dotnet_diagnostic.CA1014.severity = none
+dotnet_diagnostic.CA1019.severity = none
+dotnet_diagnostic.CA1021.severity = none
+dotnet_diagnostic.CA1040.severity = none
+dotnet_diagnostic.CA1052.severity = suggestion
+dotnet_diagnostic.CA1050.severity = suggestion
+
+# CA1002 wants Collection<T> over List<T> on public members. These are EF Core navigation collections,
+# where List<T> is the supported shape EF populates, and Domain may not take a dependency to satisfy a
+# design opinion (ARCHITECTURE.md §3: zero NuGet packages).
+dotnet_diagnostic.CA1002.severity = none
+
+# ---------------------------------------------------------------------------
+# Test project: xUnit facts/theory data and assertion helpers legitimately
+# break production-shape rules. Scoped by path so it matches every file in the
+# test project, not only files named *.Tests.cs.
+# ---------------------------------------------------------------------------
+
+[Shows.Tests/**]
+dotnet_diagnostic.CA1707.severity = none
+dotnet_diagnostic.CA1515.severity = none
+dotnet_diagnostic.CA2007.severity = none
+dotnet_diagnostic.CA1861.severity = none
+dotnet_diagnostic.CA1307.severity = none
+dotnet_diagnostic.CA1863.severity = none
+dotnet_diagnostic.CA1310.severity = none
+dotnet_diagnostic.CA1711.severity = none
+dotnet_diagnostic.CA1034.severity = none
+dotnet_diagnostic.CA1050.severity = none
+dotnet_diagnostic.CA1812.severity = none
+dotnet_diagnostic.CA2201.severity = none

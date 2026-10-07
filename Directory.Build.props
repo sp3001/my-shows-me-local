@@ -1,0 +1,18 @@
+<Project>
+
+  <!--
+    Applies to every project in the repo, including the six job projects, because it sits at the
+    repo root (IMPLEMENTATION_PLAN.md step 0.1). A project may override TargetFramework
+    (Shows.App does) but nothing may opt out of the rest by forgetting to opt in.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <AnalysisLevel>latest-all</AnalysisLevel>
+  </PropertyGroup>
+
+</Project>

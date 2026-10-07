@@ -1,0 +1,76 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Shows.App.Avalonia.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:Class="Shows.App.Avalonia.Views.ManageView"
+             x:DataType="vm:ManageViewModel">
+
+    <!-- Run the bulk jobs in-process. A list of job cards grouped by purpose; each card's Run button
+         invokes RunJobCommand with its JobOption. While a job runs, a progress panel replaces the idle
+         status line and every Run button is disabled (CanRun). The command runs the job off the UI
+         thread, so the window stays responsive; progress is marshalled back to the UI thread. -->
+    <Grid RowDefinitions="Auto,*">
+
+        <!-- Progress / status strip. Shown while a job runs (a name + bar + detail line); otherwise the
+             last result. Both occupy row 0 so the layout does not jump when a run starts. -->
+        <Border Grid.Row="0" Classes="section" Margin="12,12,12,4"
+                IsVisible="{Binding IsBusy}">
+            <StackPanel Spacing="6">
+                <TextBlock Text="{Binding RunningJobName}" Classes="sectionHeader" />
+                <ProgressBar Minimum="0" Maximum="1"
+                             Value="{Binding ProgressValue}"
+                             IsIndeterminate="{Binding IsProgressIndeterminate}"
+                             Height="8" />
+                <TextBlock Text="{Binding ProgressDetail}" Classes="muted" FontSize="12" />
+                <Button Classes="secondary" Content="Cancel" HorizontalAlignment="Left"
+                        Command="{Binding CancelCommand}" />
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Row="0" Classes="section" Margin="12,12,12,4"
+                IsVisible="{Binding IsIdle}">
+            <Panel>
+                <TextBlock Text="{Binding StatusMessage}" Classes="muted" TextWrapping="Wrap"
+                           IsVisible="{Binding StatusMessage, Converter={StaticResource IsNotNull}}" />
+                <TextBlock Text="Pick a job to run. It runs right here — the window stays usable while it works."
+                           Classes="muted" TextWrapping="Wrap"
+                           IsVisible="{Binding StatusMessage, Converter={StaticResource IsNullOrEmpty}}" />
+            </Panel>
+        </Border>
+
+        <!-- The job cards. One ItemsControl per group; each group is a titled stack of cards. -->
+        <ScrollViewer Grid.Row="1" Margin="12,4,12,12">
+            <ItemsControl ItemsSource="{Binding Groups}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:JobGroup">
+                        <StackPanel Spacing="8" Margin="0,8,0,0">
+                            <TextBlock Text="{Binding Title}" Classes="sectionHeader" />
+                            <ItemsControl ItemsSource="{Binding Jobs}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:JobOption">
+                                        <Border Classes="card" Margin="0,0,0,6">
+                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                                <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Label}" FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource TextPrimaryBrush}" />
+                                                    <TextBlock Text="{Binding Description}" Classes="muted"
+                                                               FontSize="12" TextWrapping="Wrap" />
+                                                </StackPanel>
+                                                <Button Grid.Column="1" Classes="secondary" Content="Run"
+                                                        VerticalAlignment="Center"
+                                                        Command="{Binding DataContext.RunJobCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

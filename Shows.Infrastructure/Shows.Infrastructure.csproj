@@ -1,0 +1,62 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    ARCHITECTURE.md §3. Owns EF Core, HTTP, Serilog and configuration. Serilog is the only logging
+    package set in the solution and it is referenced here alone (ARCHITECTURE.md §7); Application and
+    Domain stay clean and call sites use ILogger<T>.
+
+    Polly arrives via Microsoft.Extensions.Http.Polly, which is the handler-pipeline integration the
+    retry/circuit-breaker policy needs (ARCHITECTURE.md §5). The standalone v8 Polly package is
+    deliberately not referenced alongside it: the two resolve to different Polly majors and the policy
+    API chosen at step 3.1 must match whichever one is actually on the graph.
+  -->
+  <PropertyGroup>
+    <RootNamespace>Shows.Infrastructure</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.11" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.11">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="EFCore.NamingConventions" Version="8.0.3" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Http.Polly" Version="8.0.11" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="8.0.0" />
+    <PackageReference Include="Serilog" Version="4.0.2" />
+    <PackageReference Include="Serilog.Extensions.Hosting" Version="8.0.0" />
+    <PackageReference Include="Serilog.Settings.Configuration" Version="8.0.4" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Shows.Application\Shows.Application.csproj" />
+    <ProjectReference Include="..\Shows.Domain\Shows.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The logging level filter is exercised directly by a test (step 0.8 acceptance: "a level filter
+         nobody has seen fail is not a level filter"). ResolveMinimumLevel is internal; this is the
+         only seam exposed, and it is test-only. -->
+    <InternalsVisibleTo Include="Shows.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      One configuration for every executable (ARCHITECTURE.md §7). These are Content, not None, so they
+      flow transitively into each referencing executable's output — the MAUI app and all the jobs get a
+      copy without each declaring it. logging.json is Linked to the output root so it sits beside
+      Shows.Infrastructure.dll, which is where AddShowsLogging reads it from (the assembly directory,
+      not the working directory, so it resolves identically under `dotnet run` and a published exe).
+    -->
+    <None Remove="appsettings.json" />
+    <Content Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Remove="Logging\logging.json" />
+    <Content Include="Logging\logging.json" Link="logging.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>
