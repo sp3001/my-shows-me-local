@@ -23,6 +23,78 @@ not verification for a data step — quote row counts.
 
 Newest entry first.
 
+### 2026-10-31 — Bug fix — the backfill invented watch marks for not-yet-aired episodes (ADR-037)
+
+**Request.** User: "I found some watched episodes which according to date were marked during import but
+episodes aired just now ... maybe they were in db and myshows didnt have them as unwatched as they were
+in the future". Their probe: `select * from episode_watch w join episode e on w.episode_id = e.id where
+w.watched_at < e.air_date`. They also asked for a SQL repair, because they will not re-import.
+
+**Diagnosis.** 14 rows on the pre-fix DB, every one stamped inside the `--promote` window
+(2026-09-29 21:39–21:43), `needs_review = 0` on all of them. Two defects in
+`Promoter.BackfillWatchMarksAsync` branch 3 — see ADR-037. Verified that the excess marks are 100 %
+future-dated (row-number-over-`totalEpisodes` query: `excess_past = 0` for all six shows), so the
+user's air-date probe catches every over-mark and there are no silent past-dated ones.
+
+**Files changed:**
+- `Shows.Infrastructure/Import/Promoter.cs` — branch 3 gated on `TotalEpisodes > 0`; a post-branch
+  withhold of episodes with `AirDate > importDay`; branch 1's `needs_review` moved to after the guard
+  (`bool? needsReview` → `var review = needsReview ?? toMark.Count != target.WatchedEpisodes`).
+- `Shows.Tests/Integration/PromoterTests.cs` — `Payload` gained `futureRegulars` (no existing fixture
+  could produce an episode dated after today, which is why 12 passing tests missed this); 3 new tests.
+- `docs/DATA_ANALYSIS.md` §5 — case 3 amended, "Two guards" subsection added.
+- `docs/DECISIONS.md` — ADR-037 (amends ADR-018). `docs/STATE.md` — step-log line.
+- `draft/fix-import-watched-before-air.sql` (repair script), `draft/dbq.py` (read-only query helper),
+  `draft/test_fix_sql.py` (applies the script to a scratch copy and asserts invariants).
+
+**Verification.**
+```
+> dotnet test Shows.Tests --filter "FullyQualifiedName~PromoterTests"
+Passed!  - Failed: 0, Passed: 15, Skipped: 0, Total: 15
+
+> # both guards temporarily neutralised (branch-3 gate removed, withhold predicate `false &&`)
+Failed!  - Failed: 3, Passed: 12, Total: 15     # each new test fails without the fix
+
+> dotnet test Shows.Tests
+Passed!  - Failed: 0, Passed: 356, Skipped: 0, Total: 356
+
+> python draft\test_fix_sql.py                  # script applied to a consistent copy
+STEP 1a deletes 11 rows (Blade Runner 2099 S1E1-E8, Neuromancer S1E1, Silo S4E1, Yellowjackets S4E1)
+STEP 1b leaves 3 for manual review (Dark Matter S2E6/S2E7, Dexter: Resurrection S2E1)
+import-era marks still on NEVER-AIRED episodes: 0
+watched_regular disagreeing with a recount: 0
+total_regular disagreeing with a recount: 0
+auto_finish_eligible disagreeing: 0
+marks on non-counted episodes lost: 0
+has_unwatched_specials disagreeing: 0
+episode_watch rows: 10945 -> 10934 (deleted 11)
+```
+
+**New facts learned**
+- **`totalEpisodes` from myshows counts only episodes myshows has seen**, so it is not the size of the
+  TVmaze catalog. Measured: `Шершни` 29 vs 30 counted, `Укрытие` 30 vs 31, `Темная материя` 14 vs 19,
+  `Декстер: Воскрешение` 10 vs 11. This is the mechanism behind the bug, and §5 did not say it.
+- Only two staging rows have `total_episodes = 0 AND watched_episodes = 0`: 77831 (Бегущий по лезвию
+  2099, `later.json`, 8 counted episodes all future) and 88646 (Нейромант, `watching.json`, 1 counted
+  episode, 2027-01-22). Both are `In Development` — not-yet-airing shows, which is exactly when a 0/0
+  show has a populated catalog.
+- `max(staging_show.promoted_at)` = 2026-09-29 21:43:57+00:00; the last import mark is 21:43:56 and the
+  first UI mark 2026-09-30 14:07, so `watched_at <= max(promoted_at)` cleanly separates import marks
+  from the user's own. All `watched_at` share one `+00:00` ISO format, so TEXT comparison is sound.
+- All 547 staging rows are promoted and 0 are unpromoted, so `--promote` will not run again here — the
+  code fix is prevention for a future import, and the SQL script is the actual repair.
+
+**Deviations.** The repair script deletes only the *provably* wrong marks (episode still unaired as of
+today). Marks on episodes that aired between the import and today are ambiguous — the user may have
+watched them since, and the UI would never have corrected a row that already read "watched" — so they
+are listed for manual review rather than deleted. `--promote` is one-shot, so no code path can re-create
+the bad rows; no migration was needed because no schema changed.
+
+**Unblocked.** Nothing was blocked. A future re-import (a fresh `--reset --stage` + `--promote`) now
+reconstructs watch state without inventing marks.
+
+---
+
 ### 2026-10-07 — Improvement 21 — A show's displayed country falls back to its language
 
 **Request.** User: for shows without country where language is filled, set country = language so it

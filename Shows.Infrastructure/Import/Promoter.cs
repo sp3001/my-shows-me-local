@@ -272,9 +272,11 @@ internal sealed class Promoter(
         await tx.CommitAsync(ct);
     }
 
-    // The four-branch backfill (DATA_ANALYSIS §5). Returns needs_review. Specials are never marked in
-    // any branch. The mapped Episode rows already exist (the mapper ran), so the plan is expressed
-    // against them directly — episode_watch points at their ids.
+    // The four-branch backfill (DATA_ANALYSIS §5, ADR-018 as amended by ADR-037). Returns needs_review.
+    // Specials are never marked in any branch, and no episode that had not aired at import time is ever
+    // marked whichever branch fired. The mapped Episode rows already exist (the mapper ran), so the plan
+    // is expressed marked whatever the branch chose. The mapped Episode rows already exist (the mapper ran), so the
+    // plan is expressed against them directly — episode_watch points at their ids.
     private async Task<bool> BackfillWatchMarksAsync(
         TrackedShow show, PromoteTarget target, CancellationToken ct)
     {
@@ -304,7 +306,9 @@ internal sealed class Promoter(
             .ToListAsync(ct)).ToHashSet();
 
         List<Episode> toMark;
-        bool needsReview;
+        // null means "decide by comparing the final mark count against what the export claimed" — the
+        // user's rule for branch 1. A branch with an unconditional verdict sets it directly.
+        bool? needsReview;
 
         if (unwatchedList.Count > 0)
         {
@@ -324,13 +328,18 @@ internal sealed class Promoter(
             toMark = boundary is null
                 ? []
                 : regulars.Where(e => Before(e, boundary.Value)).ToList();
-            needsReview = toMark.Count != target.WatchedEpisodes;
+            needsReview = null; // decided after the future-episode guard below
         }
-        else if (target.WatchedEpisodes == target.TotalEpisodes)
+        else if (target.TotalEpisodes > 0 && target.WatchedEpisodes == target.TotalEpisodes)
         {
             // Branch 3 (checked before the heuristic): fully watched is unambiguous — all regulars.
             // The distribution table (DATA_ANALYSIS §5) has 33 such shows and they must NOT be flagged
             // for review, which is why this precedes the watched>0 heuristic below.
+            //
+            // The TotalEpisodes > 0 guard is load-bearing. A show myshows has no episode data for
+            // reports 0/0, and 0 == 0 satisfies `watched == total`, so without it such a show takes
+            // this branch and every episode in the TVmaze catalog is marked watched — for a show the
+            // user has demonstrably not watched. DATA_ANALYSIS §5 says a 0/0 show falls into branch 4.
             toMark = regulars;
             needsReview = false;
         }
@@ -346,6 +355,34 @@ internal sealed class Promoter(
             toMark = [];
             needsReview = false;
         }
+
+        // An episode that had not aired yet when the import ran cannot have been watched, whatever the
+        // export's counts imply. This is not a corner case: myshows only counts episodes it has seen, so
+        // its totalEpisodes/watchedEpisodes pair silently under-counts a TVmaze catalog that already
+        // lists future episodes. "Fully watched" on myshows' list is therefore NOT fully watched on
+        // TVmaze's list, and every future episode inherits a fabricated watched mark (ADR-037).
+        // Withholding them is the conservative direction: a wrongly-unwatched episode is one click to
+        // fix, a fabricated watched mark is invisible. An episode with no air date at all is left
+        // eligible — absence of a date is a TVmaze gap, not evidence the episode is in the future.
+        var importDay = DateOnly.FromDateTime(DateTimeOffset.UtcNow.UtcDateTime);
+        var withheld = toMark.Where(e => e.AirDate > importDay).ToHashSet();
+        if (withheld.Count > 0)
+        {
+            toMark = toMark.Except(withheld).ToList();
+            // Warning, not Information: branch 3 leaves needs_review false, so for a fully-watched show
+            // this line is the only surviving signal that the export's claim conflicted with the air
+            // dates. The user's rule is to be told when the reconstruction disagrees.
+            logger.LogWarning(
+                "Promote: withheld {Count} not-yet-aired episode(s) from the watch backfill of show "
+                + "{TvmazeId} (myshows claimed {Watched}/{Total}); earliest air date {AirDate}.",
+                withheld.Count, target.TvmazeId, target.WatchedEpisodes, target.TotalEpisodes,
+                withheld.Min(e => e.AirDate!.Value));
+        }
+
+        // Decided here rather than in the branch so a count comparison sees the final mark set: the
+        // guard above can legitimately shrink it, and a disagreement the user asked to be told about
+        // must not be measured against a pre-guard count.
+        var review = needsReview ?? toMark.Count != target.WatchedEpisodes;
 
         var existingWatched = (await db.EpisodeWatches
             .Where(w => w.ShowId == show.Id)
@@ -379,7 +416,7 @@ internal sealed class Promoter(
         show.AutoFinishEligible = progress.AutoFinishEligible;
         await db.SaveChangesAsync(ct);
 
-        return needsReview;
+        return review;
     }
 
     // Strict (season, episode) ordering: e sorts before the boundary when its season is lower, or the

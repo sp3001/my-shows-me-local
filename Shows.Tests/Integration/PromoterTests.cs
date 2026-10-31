@@ -165,6 +165,75 @@ public sealed class PromoterTests : IDisposable
     }
 
     [Fact]
+    public async Task Zero_total_but_a_populated_catalog_marks_nothing()
+    {
+        // ADR-037 root cause A. The test above has an EMPTY catalog, so it cannot catch this: when
+        // TVmaze already lists episodes but myshows has no data (0/0), `watched == total` is 0 == 0 and
+        // branch 3 used to mark every one of them watched for a show the user has not watched. A 0/0
+        // show must reach branch 4 regardless of what the catalog holds.
+        SeedShow(myshows: 1, tvmaze: 101, status: "later", total: 0, watched: 0);
+        var source = new FakeSource().Add(Payload(101, regulars: 3, status: "In Development"));
+
+        var report = await RunPromoter(source);
+
+        Assert.False(report.Refused);
+        Assert.Equal(1, report.Promoted);
+
+        await using var db = CreateContext();
+        var show = await db.TrackedShows.SingleAsync(s => s.TvmazeId == 101);
+        Assert.Equal(3, show.TotalRegular);      // the catalog really is populated
+        Assert.Equal(0, show.WatchedRegular);    // and nothing was invented
+        Assert.Equal(0, await db.EpisodeWatches.CountAsync(w => w.ShowId == show.Id));
+        Assert.False((await db.UserShows.SingleAsync(u => u.TrackedShowId == show.Id)).NeedsReview);
+    }
+
+    [Fact]
+    public async Task Fully_watched_show_never_marks_episodes_that_had_not_aired_yet()
+    {
+        // ADR-037 root cause B. myshows counts only episodes it has seen, so 2/2 means "fully watched
+        // of the 2 it knows about" — not fully watched of the 4 TVmaze lists. The two future episodes
+        // must stay unwatched, and the counted total must still include them.
+        SeedShow(myshows: 1, tvmaze: 101, status: "watching", total: 2, watched: 2);
+        var source = new FakeSource().Add(
+            Payload(101, regulars: 2, status: "Running", futureRegulars: 2));
+
+        await RunPromoter(source);
+
+        await using var db = CreateContext();
+        var show = await db.TrackedShows.SingleAsync(s => s.TvmazeId == 101);
+        Assert.Equal(4, show.TotalRegular);
+        Assert.Equal(2, show.WatchedRegular);
+
+        var watchedNumbers = await db.EpisodeWatches
+            .Where(w => w.ShowId == show.Id)
+            .Join(db.Episodes, w => w.EpisodeId, e => e.Id, (w, e) => e.EpisodeNumber)
+            .ToListAsync();
+        Assert.Equal([1, 2], watchedNumbers.Order().ToList()); // e03/e04 air in 2099
+        Assert.False((await db.UserShows.SingleAsync(u => u.TrackedShowId == show.Id)).NeedsReview);
+    }
+
+    [Fact]
+    public async Task Withholding_future_episodes_that_breaks_the_count_agreement_flags_review()
+    {
+        // The user's rule (ADR-018) is to flag whenever the reconstructed count disagrees with the
+        // export. The future-episode guard legitimately shrinks the reconstructed count, so the
+        // comparison must run against the FINAL set — otherwise a disagreement is swallowed.
+        // e01-e02 aired, e03-e06 are future; the unwatched list names e06, so the frontier marks
+        // e01-e05 and the guard leaves e01-e02. The export claimed 5.
+        SeedShow(myshows: 1, tvmaze: 101, status: "watching", total: 6, watched: 5);
+        SeedUnwatched(1, season: 1, episode: 6);
+        var source = new FakeSource().Add(
+            Payload(101, regulars: 2, status: "Running", futureRegulars: 4));
+
+        await RunPromoter(source);
+
+        await using var db = CreateContext();
+        var show = await db.TrackedShows.SingleAsync(s => s.TvmazeId == 101);
+        Assert.Equal(2, show.WatchedRegular);
+        Assert.True((await db.UserShows.SingleAsync(u => u.TrackedShowId == show.Id)).NeedsReview);
+    }
+
+    [Fact]
     public async Task Each_source_status_maps_to_its_category()
     {
         SeedShow(myshows: 1, tvmaze: 101, status: "watching", total: 1, watched: 1);
@@ -362,9 +431,16 @@ public sealed class PromoterTests : IDisposable
         }
     }
 
-    // A synthetic payload: `regulars` regular episodes in season 1 (numbered 1..N), optionally one
-    // special in season 0. Status controls auto_finish_eligible via the mapper's vocabulary.
-    private static TvmazePayload Payload(int tvmazeId, int regulars, string status = "Ended", bool withSpecial = false)
+    // A synthetic payload: `regulars` regular episodes in season 1 (numbered 1..N) dated in the PAST,
+    // optionally `futureRegulars` more regulars numbered after them but dated well after today (the
+    // condition the not-yet-aired guard keys on), optionally one special in season 0. Status controls
+    // auto_finish_eligible via the mapper's vocabulary.
+    private static TvmazePayload Payload(
+        int tvmazeId,
+        int regulars,
+        string status = "Ended",
+        bool withSpecial = false,
+        int futureRegulars = 0)
     {
         var show = new TvmazeShow
         {
@@ -389,6 +465,23 @@ public sealed class PromoterTests : IDisposable
                 TypeRaw = "regular",
                 Airdate = "2020-01-01",
                 Airstamp = $"2020-01-0{n + 1}T21:00:00+00:00",
+                RawJson = "{}",
+                FetchedAt = DateTimeOffset.UtcNow,
+            });
+        }
+
+        for (var n = regulars + 1; n <= regulars + futureRegulars; n++)
+        {
+            episodes.Add(new TvmazeEpisode
+            {
+                TvmazeEpisodeId = tvmazeId * 1000 + n,
+                TvmazeShowId = tvmazeId,
+                Name = $"S01E{n:D2}",
+                SeasonNumber = 1,
+                Number = n,
+                TypeRaw = "regular",
+                Airdate = "2099-01-01",
+                Airstamp = "2099-01-01T21:00:00+00:00",
                 RawJson = "{}",
                 FetchedAt = DateTimeOffset.UtcNow,
             });

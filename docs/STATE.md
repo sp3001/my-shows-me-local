@@ -20,10 +20,10 @@ not_authoritative_for:
 > Protocol: `../AGENTS.md`. Ownership of every fact in this repo: the `authority` front matter of
 > each document. If two documents disagree, read the one that declares the fact.
 
-**Last updated:** 2026-10-07
+**Last updated:** 2026-10-31
 **Overall status:** **Phases 0–6 are complete; steps 7.1–7.5, 8.1 and 8.4 are done** — steps 0.1–0.8,
 1.1–1.6, 2.1–2.6, 3.1–3.2, 4.1–4.2, 5.1–5.3, 6.1, 7.1–7.5, 8.1 and 8.4 are done. Solution
-builds with zero warnings, 353 tests pass, all seven job shells run and exit 0, and the Avalonia UI head
+builds with zero warnings, 356 tests pass, all seven job shells run and exit 0, and the Avalonia UI head
 builds. The UI head is **Avalonia** (`Shows.App.Avalonia`); the MAUI head (`Shows.App`) was removed
 (ADR-033, supersedes ADR-001).
 **Discovery buckets corrected 2026-10-06** (user fix): *New* = any season-1 episode after `windowStart`,
@@ -63,6 +63,15 @@ country facet, so cards and facet always agree). `tvmaze_show.country_name`/`cou
 Existing rows are filled **without network** by `Enrichment --country` (Manage page: "Re-derive
 countries"), which re-parses `tvmaze_show.raw_json` through the mapper. **User action: run it once**
 after the migration applies (app start or any job applies it automatically).
+**The import backfill no longer invents watch marks** (2026-10-31, ADR-037, amends ADR-018): branch 3
+of `Promoter.BackfillWatchMarksAsync` required `totalEpisodes > 0` (a 0/0 show is case 4, not "fully
+watched"), and no episode dated after the import day is ever marked — **`totalEpisodes` counts only
+episodes myshows has seen**, so it is not the size of the TVmaze catalog and "fully watched" on myshows'
+list silently under-counts future episodes. `DATA_ANALYSIS.md` §5 carries both guards. `--promote` is
+one-shot (`promoted_at` is set for all 547 rows), so this is prevention for a future import, not the
+repair. **User action: run `draft/fix-import-watched-before-air.sql`** against `data/shows.db` — it
+deletes only marks made during the import on episodes that still have not aired, recomputes the four
+cached columns, and lists the ambiguous ones (aired since the import) for manual review in the app.
 The full SQLite schema is in place across ten migrations (`0001_MainSchema`, `0002_SourceSchema`,
 `0003_Staging`, `0004_StagingIssuesImdbWarning`, `0005_TvmazeAkas`, `0006_EpisodeMismatch`,
 `0007_UserShowIsPinned`, `0008_UserShowUserRating`, `0009_DiscoveryScheduleArchive`, `0010_ShowCountry`);

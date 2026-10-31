@@ -1081,3 +1081,63 @@ through the mapper — no network, no re-crawl.
   is two facets for one dimension.
 - `Enrichment --country` is a new lease (`enrichment_country`) and `job_run` name (`Enrichment.Country`),
   and joins the bulk-writer architecture rule.
+
+---
+
+## ADR-037 — The backfill never marks an episode that had not aired at import time
+**Status:** accepted · 2026-10-31 · amends ADR-018
+
+**Problem** — the user noticed episodes marked watched whose air date was *after* the import. The probe
+is one query: `episode_watch JOIN episode WHERE watched_at < air_date`. Fourteen rows, every one of
+them stamped inside the `--promote` window, and `needs_review` was 0 on all of them — so the import
+had invented watch marks and reported nothing wrong.
+
+Two independent defects in `Promoter.BackfillWatchMarksAsync`, both in branch 3:
+
+1. **A 0/0 show took branch 3 instead of branch 4.** `watched == total` is `0 == 0` for a show myshows
+   has no episode data for, which satisfies "fully watched". `DATA_ANALYSIS.md` §5 already says a 0/0
+   show falls into case 4 — the code just did not enforce it, because the documented edge case was
+   tested only with an *empty* catalog. When TVmaze already lists episodes, all of them got marked.
+2. **`totalEpisodes` from myshows is not the size of the TVmaze catalog.** myshows counts only episodes
+   it has seen; TVmaze lists future episodes too. So "fully watched" on myshows' list is *not* fully
+   watched on TVmaze's list, and every future episode inherits a watched mark. `needs_review` stayed
+   clean because branch 3 never compares its count against anything.
+
+**Decision**
+- Branch 3 requires `totalEpisodes > 0`. A 0/0 show reaches branch 4 and marks nothing.
+- After whichever branch chooses its set, any episode whose `air_date` is later than the day the import
+  ran is **withheld** from the marks, and the withhold is logged at Warning — branch 3 leaves
+  `needs_review` false, so for a fully-watched show that line is the only surviving signal.
+- `needs_review` for branch 1 is computed against the **final** mark set, not the branch's raw output.
+  The guard legitimately shrinks that set, and the whole point of ADR-018 is that a disagreement with
+  the export's count gets flagged — measuring it before the guard would swallow exactly the disagreement
+  the user asked to be told about.
+
+**Why withholding and not, say, trusting the count** — a wrongly-unwatched episode is one click in the
+app; a fabricated watched mark is invisible, inflates progress, and can make an airing show look
+auto-finish-eligible. The conservative direction is the one that fails visibly.
+
+**Scope of the repair** — existing rows are fixed by `draft/fix-import-watched-before-air.sql`, which
+deletes only marks made during the import (`watched_at <= max(promoted_at)`) on episodes that *still*
+have not aired. Marks on episodes that aired between the import and today are left alone: the mark was
+fabricated, but the user may genuinely have watched them since, and the UI would never have corrected
+it because the row already read "watched".
+
+**Alternatives rejected**
+- *Cap the marks at `totalEpisodes` instead of filtering by air date* — it fixes the symptom for branch 3
+  and silently corrupts branch 1, where the frontier is positional and a cap would truncate the wrong
+  end. It also marks future episodes watched while leaving genuinely-unwatched past ones unmarked.
+- *Re-run `--promote`* — impossible: `promoted_at IS NOT NULL` removes every show from the target set,
+  and re-minting episode ids would orphan `episode_watch` (AGENTS.md). The user is not re-importing.
+- *Treat a null `air_date` as future* — a missing date is a TVmaze gap, not evidence of a future
+  episode; withholding on it would drop watchable episodes.
+- *Set `needs_review` instead of withholding* — leaves the wrong mark in place and makes the user undo
+  something the importer invented, when the importer can simply not invent it.
+
+**Consequences**
+- `Payload(...)` in `PromoterTests` gained `futureRegulars`, because no existing fixture could produce
+  an episode dated after today — which is precisely why the bug survived 12 passing tests.
+- The 0/0 test still cannot catch defect 1 on its own (its catalog is empty); the new
+  `Zero_total_but_a_populated_catalog_marks_nothing` is the one that pins it.
+- `--promote` will not run again on this database, so the code fix is prevention for a future import,
+  not the repair. The repair is the SQL script.

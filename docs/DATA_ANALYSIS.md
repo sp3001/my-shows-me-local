@@ -142,11 +142,32 @@ Algorithm, per show, in order. **Specials are never auto-marked in any branch.**
    count ≠ `watchedEpisodes`.
 2. **No list, `watchedEpisodes > 0`** → mark the first N regular episodes in absolute
    (season, episode) order as watched. Set `needs_review = 1` unconditionally.
-3. **`watchedEpisodes == totalEpisodes`** → all regular episodes watched. `needs_review = 0`.
+3. **`watchedEpisodes == totalEpisodes` and `totalEpisodes > 0`** → all regular episodes watched.
+   `needs_review = 0`.
 4. **`watchedEpisodes == 0`** → nothing watched. `needs_review = 0`.
 
 Edge case that must not crash: at least one show has `totalEpisodes: 0` and `watchedEpisodes: 0`.
 It falls into case 4 and must end up with `total_regular = 0`, `auto_finish_eligible = 0` (SPEC R7).
+
+### Two guards added after the first promote (ADR-037)
+
+Both were found because the user spotted episodes marked watched whose air date was after the import
+(`episode_watch JOIN episode WHERE watched_at < air_date`), with `needs_review = 0` on every one.
+
+- **Case 3 requires `totalEpisodes > 0`.** `0 == 0` satisfies "fully watched", so a show myshows has
+  no episode data for used to take case 3 and get its whole TVmaze catalog marked. The `total = 0`
+  edge case above means case 4, and that was always the intent — the original test only exercised it
+  with an *empty* catalog, so a 0/0 show whose catalog is populated was untested.
+- **No episode dated after the import day is ever marked**, whichever case chose it. The reason is a
+  property of the export, not an edge case: **`totalEpisodes` counts only episodes myshows has seen**,
+  so it is not the size of the TVmaze catalog. Observed on live data — `Шершни` 29 vs 30 counted,
+  `Укрытие` 30 vs 31, `Темная материя` 14 vs 19, `Декстер: Воскрешение` 10 vs 11. "Fully watched of
+  what myshows knows" is not "fully watched of what TVmaze lists", and the difference is exactly the
+  future episodes. `needs_review` never caught this because case 3 compares its count against nothing.
+
+`needs_review` in case 1 is evaluated against the **final** mark set, after the air-date guard. The
+guard legitimately shrinks that set, and the user's rule is to be told when the reconstruction
+disagrees with `watchedEpisodes` — comparing before the guard would swallow that disagreement.
 
 ---
 
