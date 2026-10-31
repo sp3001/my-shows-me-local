@@ -76,7 +76,14 @@ public sealed class GetCatalogDetailsUseCase(
         // marker (ADR-034): a season-0 row or any TVmaze special type (significant or insignificant) is
         // flagged. The tracked page is where the significant/insignificant split matters.
         IsSpecial: ep.SeasonNumber == 0
-            || ep.TypeRaw is "special" or "significant_special" or "insignificant_special");
+            || ep.TypeRaw is "special" or "significant_special" or "insignificant_special",
+        // The three fields the details row renders beyond the title: the synopsis line, the still shown in
+        // the info popup, and the rating/runtime facets. All optional on the source — absent simply hides
+        // the line / chip / image rather than rendering an empty placeholder.
+        Description: ep.Summary,
+        ImageUrl: ep.ImageMediumUrl ?? ep.ImageUrl,
+        RatingAverage: ep.RatingAverage,
+        RuntimeMinutes: ep.RuntimeMinutes);
 
     // Group into seasons, DESCENDING by season number (newest season first). Within a season, episodes sort
     // by air date descending, then episode number descending — newest episode first. Nulls sort last within

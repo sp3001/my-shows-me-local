@@ -55,6 +55,19 @@ reject an injected violation.
 Step **8.4** is done: Discovery's raw schedule archive is now stored in SQLite (`discovery_schedule_archive`)
 with its existing age-triggered layers and retention; old `cache/discovery` files remain untouched and
 are not imported (ADR-035).
+**Title-line chips and fuller episode rows landed 2026-10-31** (improvements 22–24, `LOG.md`): every card and
+details header now carries `status · user rating · country · TVmaze rating` on the **title** line — the
+country and TVmaze rating moved off the meta line, which a long genre list used to push them off a trimmed
+row. The chip run sits in a `Grid ColumnDefinitions="*,Auto"`, never a `StackPanel`: a StackPanel measures
+the title at its full single-line width and pushes the chips off-screen. Details episode rows are two lines
+(marker top-aligned, `S8E22` with its runtime beneath; title · air date · watched date · rating; description
+beneath) with a `ⓘ` flyout carrying the still and the full synopsis — the flyout is attached through
+`<Button.Flyout>`, because a `<Flyout>` written as a Button **child** becomes `Button.Content` and the popup
+never opens. The Started tab shows each episode's runtime at the right **before** the air date and the
+season's total **before** the count (`~7h 4m · 13`). The runtime totals are **computed**, not stored (P5):
+`IEpisodeRepository.SumRuntimeBySeason{,ForShows}Async` sums over exactly the displayable set the header's
+count uses, so the two numbers describe the same episodes. `ShowDetails.WatchedAtByEpisodeId` reuses watch
+rows already loaded — no extra query.
 **Country fallback works 2026-10-07** (improvement 21, SPEC R15 / ADR-036): a show's displayed country is
 `broadcaster country name ?? country code ?? language`, applied at the mapped layer only
 (`CountryRules.Display` — one function, used by the mapper, the catalog read model and the Discovery
@@ -155,7 +168,7 @@ transaction, four-branch watch backfill), proven by 12 integration tests on a te
 **not** been run against the real `data/shows.db` — that is the user's action; the DB was backed up to
 `backup/pre-promote-20260930-002807/` first.
 
-What is **not** built yet: the docker-readiness pass (8.3) and the consolidated integration-test pass (8.2) — **both postponed 2026-09-30** at the user's direction. Priority shifted to fixing the defects and UX gaps recorded in `docs/user-issues.md`; **every issue and improvement there is now done** (the last two — improvement 16, a time-based HTTP-cache fallback for validator-less responses, and improvement 20, TVmaze/IMDb links on the search-details page built from the id with the URL formats in `appsettings` — landed 2026-10-02; improvement 21, the country-from-language display fallback, landed 2026-10-07; see `LOG.md`). Phase 8 can resume.
+What is **not** built yet: the docker-readiness pass (8.3) and the consolidated integration-test pass (8.2) — **both postponed 2026-09-30** at the user's direction. Priority shifted to fixing the defects and UX gaps recorded in `docs/user-issues.md`; **every issue and improvement there is now done** (the last two — improvement 16, a time-based HTTP-cache fallback for validator-less responses, and improvement 20, TVmaze/IMDb links on the search-details page built from the id with the URL formats in `appsettings` — landed 2026-10-02; improvement 21, the country-from-language display fallback, landed 2026-10-07; improvements 22–24, the title-line chips and the fuller details/Started episode rows, landed 2026-10-31; see `LOG.md`). Phase 8 can resume.
 The `Enrichment` IMDb-driven mode (7.3) is now built (ADR-031 — see below).
 The two airing-catalog jobs —
 **7.1 `EpisodeRefresh` and 7.2 `StatusRecheck`** — are now built: one shared `ShowRefreshJob` body (select →

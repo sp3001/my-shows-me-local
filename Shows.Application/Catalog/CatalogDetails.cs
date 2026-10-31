@@ -30,4 +30,19 @@ public sealed record CatalogSeason(int SeasonNumber, IReadOnlyList<CatalogEpisod
 /// <param name="Title">The episode title, as the provider gave it.</param>
 /// <param name="AirDate">The air date when known.</param>
 /// <param name="IsSpecial">True for a special (season 0 / type "special") — rendered with a marker, not a number.</param>
-public sealed record CatalogEpisode(int SeasonNumber, int? Number, string? Title, DateOnly? AirDate, bool IsSpecial);
+/// <param name="Description">The episode synopsis, markup already stripped (the provider mapper does it, so
+/// the UI never has to). Null when TVmaze has no summary — the row then shows no description line.</param>
+/// <param name="ImageUrl">The episode still, medium size when TVmaze has one. Null when it does not, in
+/// which case the info popup shows the text alone rather than a broken image.</param>
+/// <param name="RatingAverage">TVmaze's episode rating. Null when unrated.</param>
+/// <param name="RuntimeMinutes">Episode runtime. Null when the provider has none.</param>
+public sealed record CatalogEpisode(
+    int SeasonNumber,
+    int? Number,
+    string? Title,
+    DateOnly? AirDate,
+    bool IsSpecial,
+    string? Description = null,
+    string? ImageUrl = null,
+    double? RatingAverage = null,
+    int? RuntimeMinutes = null);

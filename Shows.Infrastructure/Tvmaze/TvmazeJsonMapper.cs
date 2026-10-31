@@ -210,8 +210,11 @@ internal static class TvmazeJsonMapper
             RuntimeMinutes: OptInt(ep, "runtime"),
             ImageUrl: OptString(image, "original"),
             ImageMediumUrl: OptString(image, "medium"),
-            SummaryHtml: OptString(ep, "summary"),
-            ImdbId: null);
+            // Stripped here for the same reason the show overview is (see MapCatalogShow): the details page
+            // renders plain text and the UI layer must not name Infrastructure's stripper.
+            Summary: Persistence.HtmlStripper.Strip(OptString(ep, "summary")),
+            ImdbId: null,
+            RatingAverage: OptDouble(OptObject(ep, "rating"), "average"));
     }
 
     // ---- tolerant readers (TVmaze adds/removes fields without notice) ----

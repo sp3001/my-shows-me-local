@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Shows.App.Avalonia.Services;
 using Shows.Application.UseCases;
 using Shows.Domain;
 
@@ -66,6 +67,10 @@ public sealed partial class SeasonGroupViewModel : ObservableObject
     // only consulted while _rowsBuilt is false. Null on the details page (no count shown there).
     private readonly int? _eagerCount;
 
+    // When each watched episode was marked, for the details grid's "watched …" date. Null on the card, whose
+    // inline rows are by construction all unwatched (improvement 4).
+    private readonly IReadOnlyDictionary<long, DateTimeOffset>? _watchedAtByEpisodeId;
+
     /// <summary>
     /// Eager construction: <paramref name="episodes"/> are materialized into rows immediately. Used by the
     /// details page (all episodes, unfiltered) and by a card's already-expanded seasons (pre-filtered rows).
@@ -84,7 +89,9 @@ public sealed partial class SeasonGroupViewModel : ObservableObject
         long trackedShowId,
         Action<ShowProgress> onEpisodeToggled,
         bool removeWatchedOnToggle = false,
-        Action<SeasonGroupViewModel>? onGroupEmptied = null)
+        Action<SeasonGroupViewModel>? onGroupEmptied = null,
+        int? runtimeMinutes = null,
+        IReadOnlyDictionary<long, DateTimeOffset>? watchedAtByEpisodeId = null)
     {
         Season = season;
         _scopeFactory = scopeFactory;
@@ -93,6 +100,8 @@ public sealed partial class SeasonGroupViewModel : ObservableObject
         _onEpisodeToggled = onEpisodeToggled;
         _removeWatchedOnToggle = removeWatchedOnToggle;
         _onGroupEmptied = onGroupEmptied;
+        _watchedAtByEpisodeId = watchedAtByEpisodeId;
+        _runtimeMinutes = runtimeMinutes;
         _isExpanded = isExpanded;
 
         Header = season.SeasonNumber == 0
@@ -117,11 +126,12 @@ public sealed partial class SeasonGroupViewModel : ObservableObject
         IServiceScopeFactory scopeFactory,
         long trackedShowId,
         Action<ShowProgress> onEpisodeToggled,
-        Action<SeasonGroupViewModel>? onGroupEmptied = null)
+        Action<SeasonGroupViewModel>? onGroupEmptied = null,
+        int? runtimeMinutes = null)
     {
         return new SeasonGroupViewModel(
             season, isExpanded: false, loader, displayableCount, watchedEpisodeIds, scopeFactory,
-            trackedShowId, onEpisodeToggled, onGroupEmptied);
+            trackedShowId, onEpisodeToggled, onGroupEmptied, runtimeMinutes);
     }
 
     // Private lazy constructor. Rows are deferred; the loader supplies them on first expand.
@@ -134,7 +144,8 @@ public sealed partial class SeasonGroupViewModel : ObservableObject
         IServiceScopeFactory scopeFactory,
         long trackedShowId,
         Action<ShowProgress> onEpisodeToggled,
-        Action<SeasonGroupViewModel>? onGroupEmptied)
+        Action<SeasonGroupViewModel>? onGroupEmptied,
+        int? runtimeMinutes)
     {
         Season = season;
         _scopeFactory = scopeFactory;
@@ -146,6 +157,7 @@ public sealed partial class SeasonGroupViewModel : ObservableObject
         _lazyLoader = loader;
         _isExpanded = isExpanded;
         _eagerCount = displayableCount;
+        _runtimeMinutes = runtimeMinutes;
 
         Header = season.SeasonNumber == 0
             ? "Specials"
@@ -181,6 +193,18 @@ public sealed partial class SeasonGroupViewModel : ObservableObject
     /// <summary>The header's chevron: ▾ when expanded, ▸ when collapsed (the card's per-season toggle).</summary>
     public string Chevron => IsExpanded ? "\u25be" : "\u25b8";
 
+    // The season's total runtime in minutes, from the read model's grouped aggregate — over the SAME
+    // displayable episodes as CountText, so the two numbers describe the same set (what is left to watch).
+    private readonly int? _runtimeMinutes;
+
+    /// <summary>
+    /// The header's total-duration text, e.g. "~3h 25m" — how long the season's listed episodes take.
+    /// Empty when the provider has no runtime for them, so the header shows the count alone rather than a
+    /// misleading zero.
+    /// </summary>
+    public string RuntimeText =>
+        RuntimeFormat.Total(_runtimeMinutes) is { } total ? "~" + total : string.Empty;
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Chevron))]
     private bool _isExpanded;
@@ -207,7 +231,10 @@ public sealed partial class SeasonGroupViewModel : ObservableObject
         _scopeFactory,
         _trackedShowId,
         _onEpisodeToggled,
-        _removeWatchedOnToggle ? OnRowBecameWatched : null);
+        _removeWatchedOnToggle ? OnRowBecameWatched : null,
+        _watchedAtByEpisodeId is { } marks && marks.TryGetValue(episode.Id, out var watchedAt)
+            ? watchedAt
+            : null);
 
     // How long a just-watched row stays in the inline list before dropping out. The checkbox flips to
     // checked immediately (in EpisodeRowViewModel); the removal is deferred by this much so the user sees
@@ -321,10 +348,12 @@ public sealed partial class EpisodeRowViewModel : ObservableObject
         IServiceScopeFactory scopeFactory,
         long trackedShowId,
         Action<ShowProgress> onToggled,
-        Action<EpisodeRowViewModel>? onBecameWatched = null)
+        Action<EpisodeRowViewModel>? onBecameWatched = null,
+        DateTimeOffset? watchedAt = null)
     {
         Episode = episode;
         _isWatched = isWatched;
+        _watchedAt = watchedAt;
         _scopeFactory = scopeFactory;
         _onToggled = onToggled;
         _onBecameWatched = onBecameWatched;
@@ -378,11 +407,76 @@ public sealed partial class EpisodeRowViewModel : ObservableObject
     /// <summary>The glyph shown before the number for an Unknown-type episode (a vocabulary gap).</summary>
     public const string UnknownGlyph = "?";
 
+    // When this episode was marked watched, supplied by the details read model. Only a tracked show has
+    // watch state, so the card's inline rows (which list only UNWATCHED episodes) never carry one. Mutable:
+    // a toggle in this row updates it so the date appears (or clears) without a page reload — the use case
+    // stamps UtcNow, so the row stamps the same instant it just wrote.
+    private DateTimeOffset? _watchedAt;
+
     public Episode Episode { get; }
 
     public long EpisodeId => Episode.Id;
 
     public string NumberText { get; }
+
+    /// <summary>
+    /// The watched date shown beside the air date on the details grid (tracked shows only). The date, not
+    /// the instant: the user cares which day they watched it, and the time would only widen the row.
+    /// </summary>
+    public string? WatchedAtText =>
+        IsWatched && _watchedAt is { } at ? at.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) : null;
+
+    /// <summary>TVmaze's rating for this episode, e.g. "8.1"; null when unrated, so the chip hides.</summary>
+    public string? RatingText => Episode.RatingAverage?.ToString("0.0", CultureInfo.InvariantCulture);
+
+    /// <summary>The episode's runtime, e.g. "42 min"; null when the provider has none.</summary>
+    public string? RuntimeText => RuntimeFormat.Episode(Episode.RuntimeMinutes);
+
+    /// <summary>
+    /// The synopsis, capped to one trimmed line for the row. The full text (plus the still) opens in the
+    /// row's info popup, so the row itself stays two lines tall whatever the source length is.
+    /// </summary>
+    public string DescriptionText
+    {
+        get
+        {
+            const int max = 160;
+            var text = Episode.Description;
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return string.Empty;
+            }
+
+            text = text.Trim();
+            if (text.Length <= max)
+            {
+                return text;
+            }
+
+            var cut = text.LastIndexOf(' ', max);
+            return (cut > 0 ? text[..cut] : text[..max]).TrimEnd() + "…";
+        }
+    }
+
+    public bool HasDescription => DescriptionText.Length > 0;
+
+    /// <summary>
+    /// The untruncated synopsis for the info popup. The row shows <see cref="DescriptionText"/> (one line)
+    /// while the popup shows this in full — that is the whole point of the popup, so the two must not share
+    /// a property.
+    /// </summary>
+    public string? FullDescription => string.IsNullOrWhiteSpace(Episode.Description) ? null : Episode.Description!.Trim();
+
+    /// <summary>The episode still for the info popup; null when TVmaze has none.</summary>
+    public string? ImageUrl => Episode.ImageMediumUrl ?? Episode.ImageUrl;
+
+    public bool HasImage => !string.IsNullOrEmpty(ImageUrl);
+
+    /// <summary>
+    /// Whether the row gets an info button at all — only when there is something to show in the popup, so a
+    /// show whose episodes have no synopsis or still does not grow a button that opens an empty box.
+    /// </summary>
+    public bool HasInfo => HasDescription || HasImage;
 
     public string PrimaryTitle { get; }
 
@@ -403,6 +497,7 @@ public sealed partial class EpisodeRowViewModel : ObservableObject
     public string? AirDateText => Episode.AirDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(WatchedAtText))]
     private bool _isWatched;
 
     [ObservableProperty]
@@ -433,6 +528,9 @@ public sealed partial class EpisodeRowViewModel : ObservableObject
         {
             if (ok && progress is not null)
             {
+                // The timestamp first, so the PropertyChanged raised by IsWatched recomputes WatchedAtText
+                // against the new state rather than the old one.
+                _watchedAt = IsWatched ? null : DateTimeOffset.UtcNow;
                 IsWatched = !IsWatched;
                 _onToggled(progress);
 

@@ -90,6 +90,11 @@ public sealed class GetStartedCardsUseCase(
             .CountDisplayableEpisodesBySeasonForShowsAsync(trackedShowIds, today, cancellationToken)
             .ConfigureAwait(false);
 
+        // 5b. The matching per-season runtime total, same predicate and key — the season header's duration.
+        var runtimeBySeason = await episodes
+            .SumRuntimeBySeasonForShowsAsync(trackedShowIds, today, cancellationToken)
+            .ConfigureAwait(false);
+
         // 6. The most recent already-aired date per show, for the Started "sort by last aired" (improvement
         //    12). Computed here rather than cached on tracked_show (SPEC P5) — the batch read is the one
         //    place that already touches every Started show, so the sort needs no schema column.
@@ -105,6 +110,7 @@ public sealed class GetStartedCardsUseCase(
 
             var bySeason = new Dictionary<long, IReadOnlyList<Episode>>();
             var showCounts = new Dictionary<long, int>();
+            var showRuntime = new Dictionary<long, int>();
             foreach (var season in seasons)
             {
                 if (expandedIds.Contains(season.Id)
@@ -117,9 +123,14 @@ public sealed class GetStartedCardsUseCase(
                 {
                     showCounts[season.Id] = count;
                 }
+
+                if (runtimeBySeason.TryGetValue(season.Id, out var minutes))
+                {
+                    showRuntime[season.Id] = minutes;
+                }
             }
 
-            result[showId] = new CardSeasons(seasons, expandedIds, bySeason, showCounts);
+            result[showId] = new CardSeasons(seasons, expandedIds, bySeason, showCounts, showRuntime);
         }
 
         return new StartedCardsBatch(result, lastAired);

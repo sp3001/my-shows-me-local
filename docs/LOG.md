@@ -23,7 +23,101 @@ not verification for a data step — quote row counts.
 
 Newest entry first.
 
-### 2026-10-31 — Bug fix — the backfill invented watch marks for not-yet-aired episodes (ADR-037)
+### 2026-10-31 — UI improvements 22, 23, 24 — title-line chips, and episode rows that fill the details page
+
+**Request.** User, in six messages: (1) "Move country and tvmaze rating to title line, after user rating,
+display as grey chip, add dot separator after status user rating chips. Do this in all lists. On show
+details page there is a lot of free space. So display truncated episode description there… more info icon
+which opens popup with episode image and full description. Also for tracked shows — if episode watched
+display watched at date". (2) "if there is no poster or description — dont show icon… except watched at is
+only for tracked". (3) the row geometry: "make season-episode (s8e22) text aligned to top… move air date
+next to episode title (1), watched at date next to it (2), and short description as second line (3), info
+button can sit at right side of the episode line with middle vertical alignment". (4) per-episode TVmaze
+rating next to the title and duration under the marker in small grey, still two lines. (5) episode duration
+on the Started tab with a total on the season line. (6) a correction after seeing it: "on started it should
+be on right, before air date, and total should be before episode count".
+
+**Files changed.**
+- Read model: `Shows.Application/Interfaces/IEpisodeRepository.cs` (+`SumRuntimeBySeasonAsync`,
+  `SumRuntimeBySeasonForShowsAsync`), `Shows.Infrastructure/Persistence/Repositories/EpisodeRepository.cs`
+  (both delegate to one private `SumRuntimeAsync`), `UseCases/GetCardSeasonsUseCase.cs`,
+  `UseCases/GetStartedCardsUseCase.cs` (batched, sliced per show), `UseCases/ReadUseCases.cs`
+  (`ShowDetails.WatchedAtByEpisodeId`), `UseCases/GetCatalogDetailsUseCase.cs`,
+  `Catalog/CatalogDetails.cs`, `Catalog/ICatalogProvider.cs`,
+  `Shows.Infrastructure/Tvmaze/TvmazeJsonMapper.cs`.
+- UI: `Shows.App.Avalonia/Services/RuntimeFormat.cs` (new), `ViewModels/SeasonGroupViewModel.cs`,
+  `TrackedShowCardViewModel.cs`, `ShowCardViewModel.cs`, `ShowDetailsViewModel.cs`,
+  `CatalogEpisodeViewModels.cs`, `Styles/Controls.axaml` (`TextBlock.chipDot`, `Button.info`),
+  `Views/TrackedShowCardView.axaml`, `ShowCardView.axaml`, `ShowDetailsView.axaml` (+`.axaml.cs`),
+  `SearchDetailsView.axaml`.
+- `tasks/done/ui-22-24-title-chips-episode-lines.md`, `docs/STATE.md`, `docs/user-issues.md`.
+
+**Verification.**
+```
+> dotnet build Shows.sln -v q --nologo
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+> dotnet test Shows.Tests --nologo -v q
+Passed!  - Failed: 0, Passed: 356, Skipped: 0, Total: 356, Duration: 10 s - Shows.Tests.dll (net8.0)
+```
+No new tests: every change is a XAML layout or a read-model projection, and the two new repository methods
+are aggregates over a predicate already covered by `CountDisplayableEpisodesBySeason*`'s tests. The UI was
+checked by launching the app and capturing its window (`draft/app-script.ps1`, PrintWindow — `CopyFromScreen`
+returns "the handle is invalid" on this RDP session). Observed on the Started tab: `Lanterns · 2026 · Drama ·
+Action · Adventure · Science Fiction` with `Airing` `★ 8` `·` `US` `★ 6.4` on the title line; season header
+`Season 13  ~7h 4m · 13  ▾`; episode rows ending `… 60 min · 2026-10-04`. The `ⓘ` glyph renders on the
+details rows, which is the proof the flyout is attached to `Button.Flyout` and has not swallowed the
+button's `Content`.
+
+**Not verified by me.** That the flyout actually *opens* with the still and the full synopsis, and that
+clicking it leaves the watched mark alone. Synthetic clicks land on rows and nav tabs but I could not hit
+the 15 px `ⓘ` reliably; the user took over verification there ("i will test myself"). No watch state was
+damaged in the attempt: `Lanterns` S1E5 (`episode_id 98534051659788291`) still carries its original
+import-era `watched_at` of 2026-09-29 21:39:08, so the click near the `ⓘ` did not flip the mark —
+consistent with the Button-ancestor guard, though it does not prove the popup opened.
+
+**New facts learned**
+- **A `Flyout` written as a `<Button>` child is not a flyout.** `Button` derives from `ContentControl`, whose
+  `Content` is the `[Content]` property, and `Flyout` is not a `Control` — so the child became the button's
+  content and `Button.Flyout` stayed null: the `ⓘ` glyph from `Button.info` vanished and clicking did
+  nothing. The build stays green either way, so a clean compile proves nothing here. The canonical form is
+  `<Button.Flyout><Flyout/></Button.Flyout>` (ControlCatalog).
+- **A horizontal `StackPanel` measures a `TextBlock` at its full single-line width**, so chips placed after a
+  long title are pushed off the right edge; with `TextWrapping="Wrap"` the measure returns the *available*
+  width and the chips always drop to a second line. `Grid ColumnDefinitions="*,Auto"` (star first) gives the
+  chips their width first and lets the title take the remainder and wrap. A `WrapPanel` was tried first and
+  rejected for exactly this reason.
+- **A flyout's content inherits the placement target's `DataContext`**: `PopupFlyoutBase.ShowAtCore` sets
+  `Popup.PlacementTarget = Target = placementTarget; Popup.SetPopupParent(placementTarget)` and `Popup.Open()`
+  does `((ISetLogicalParent)popupHost).SetParent(this)`, so `{Binding}` inside the flyout resolves against the
+  row's ViewModel. No ViewModel change was needed to feed the popup.
+- `Flyout` has no `ShowPointerTheme` property (it was written into the XAML and removed), and
+  `FlyoutBase.IsOpen` only opens at the *last* placement target, so it is not a first-use binding target.
+- Synthetic input: `mouse_event` after `SetCursorPos` is unreliable here; `SendInput` with a one-pixel jiggle
+  (Avalonia re-hittests only on `WM_MOUSEMOVE`) lands clicks. `PrintWindow` with `PW_RENDERFULLCONTENT` (2)
+  captures a Skia window that `CopyFromScreen` cannot.
+
+**Deviations.**
+- `EpisodeCatalogInfo.SummaryHtml` was **renamed** to `Summary` and is now markup-stripped at the mapper, not
+  at the View. `HtmlStripper` lives in Infrastructure and the UI may not name it (`ARCHITECTURE.md` §2), so
+  the strip belongs in the provider mapper — the same precedent as `CatalogShow.Overview`. The old name
+  promised HTML that no longer arrived.
+- `MetaText` (cards) and `NetworkText` lost the country and the ★rating, which moved to the title-line chips.
+  The meta line is now year + genres on tracked cards, year only on discovery cards.
+- The season runtime is a **computed** aggregate, not a column (SPEC P5). It is summed over exactly the
+  displayable episodes the header count uses — unwatched, aired, not insignificant-specials — so `~7h 4m` and
+  `13` describe the same set. A season with no runtime anywhere is absent from the map, so the header shows
+  the count alone rather than a misleading zero.
+- `CardSeasons`, `ShowDetails` and `CatalogEpisode` were widened with **optional trailing** members so the
+  existing positional constructions in the tests still compile; no test fake implements `IEpisodeRepository`,
+  so its two new members broke nothing.
+- Toggling a watched mark now also updates the row's `WatchedAtText` in place (stamped `UtcNow`, the instant
+  the use case writes) instead of leaving a stale date until reload.
+
+**Unblocked.** Nothing was blocked. The details pages no longer waste their width, and the Started tab now
+answers "how long is left" per season and per episode.
 
 **Request.** User: "I found some watched episodes which according to date were marked during import but
 episodes aired just now ... maybe they were in db and myshows didnt have them as unwatched as they were

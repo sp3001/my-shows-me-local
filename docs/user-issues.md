@@ -21,3 +21,6 @@
 9. imdb diff on details page - show only major (like only on imdb) and hide title,runtime ones under View All button (ask which kind to show/hide if unclear)
 10. Search page and Search details should
 21. Shows without country: where language is filled, display it as country everywhere (tracked list, details, search, discovery + country filter). Example: tvmaze 84377 Dead-End Job (Netflix, country null, language Korean). DONE 2026-10-07 (ADR-036, SPEC R15) — run "Re-derive countries" once to fill existing rows
+22. Country and TVmaze rating as grey chips on the title line, after the user rating, with a dot separator after the status/user-rating chips — in all lists. DONE 2026-10-31
+23. Details page: truncated episode description in the free space, ⓘ popup with episode image + full description (icon hidden when there is neither), watched-at date on watched rows of tracked shows, per-episode TVmaze rating, per-episode duration. DONE 2026-10-31
+24. Started tab: per-episode duration at the right before the air date, season total before the episode count. DONE 2026-10-31

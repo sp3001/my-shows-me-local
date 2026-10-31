@@ -83,9 +83,34 @@ public sealed partial class ShowCardViewModel : ObservableObject
         Show.RatingAverage is null ? null : Show.RatingAverage.Value.ToString("0.0", CultureInfo.InvariantCulture);
 
     /// <summary>
-    /// The card's meta line — year · status · ★rating — assembled here rather than in XAML so absent
-    /// parts leave no dangling separator. A Span has no IsVisible, so the conditional separators cannot
-    /// live in the view; building the string is the one place that knows which parts are present.
+    /// TVmaze's rating as a grey chip on the title line (user request: it sat at the end of the meta line,
+    /// where a long genre list pushed it out of sight). Null hides the chip.
+    /// </summary>
+    public string? RatingChipText => RatingText is { Length: > 0 } rating ? "\u2605 " + rating : null;
+
+    /// <summary>
+    /// The country as a grey chip on the title line. The read model already carries the finished label
+    /// (<see cref="CountryRules.Display"/> applied by the provider), so this page, the tracked card and the
+    /// Discovery facet can never disagree about what country a show reads.
+    /// </summary>
+    public string? CountryText =>
+        string.IsNullOrWhiteSpace(Show.CountryName) ? null : Show.CountryName!;
+
+    /// <summary>Whether the grey chip group after the dot has anything to show.</summary>
+    public bool HasTitleMetaChips => CountryText is not null || RatingChipText is not null;
+
+    /// <summary>
+    /// The dot between the status chip and the catalog chips (country, TVmaze rating). Shown only when there
+    /// is something on both sides, so the line never starts or ends with a separator.
+    /// </summary>
+    public bool ShowChipSeparator =>
+        StatusText is { Length: > 0 } && HasTitleMetaChips;
+
+    /// <summary>
+    /// The card's meta line — just the year. Status and TVmaze's rating moved to chips on the title line
+    /// (user request), and the genres have their own line, so this line is what is left of the old
+    /// year · status · ★rating run. Assembled here rather than in XAML so an absent part leaves no dangling
+    /// separator (a Span has no IsVisible).
     /// </summary>
     public string MetaText
     {
@@ -95,16 +120,6 @@ public sealed partial class ShowCardViewModel : ObservableObject
             if (YearText is { Length: > 0 } year)
             {
                 parts.Add(year);
-            }
-
-            if (StatusText is { Length: > 0 } status)
-            {
-                parts.Add(status);
-            }
-
-            if (RatingText is { Length: > 0 } rating)
-            {
-                parts.Add("★" + rating);
             }
 
             return string.Join("  ·  ", parts);
@@ -134,9 +149,9 @@ public sealed partial class ShowCardViewModel : ObservableObject
     }
 
     /// <summary>
-    /// The broadcaster · country · premiere-date line (user-issues 19 follow-up: the card had room and the
-    /// facets were already on the read model; the full premiere date is appended after the network).
-    /// Assembled here so an absent part leaves no dangling separator.
+    /// The broadcaster · premiere-date line (user-issues 19 follow-up: the card had room and the facets were
+    /// already on the read model; the full premiere date is appended after the network). The country moved
+    /// to a chip on the title line. Assembled here so an absent part leaves no dangling separator.
     /// </summary>
     public string NetworkText
     {
@@ -146,11 +161,6 @@ public sealed partial class ShowCardViewModel : ObservableObject
             if (!string.IsNullOrWhiteSpace(Show.NetworkName))
             {
                 parts.Add(Show.NetworkName!);
-            }
-
-            if (!string.IsNullOrWhiteSpace(Show.CountryName))
-            {
-                parts.Add(Show.CountryName!);
             }
 
             if (Show.PremiereDate is { } premiere)

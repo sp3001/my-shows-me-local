@@ -1,5 +1,7 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.VisualTree;
 using Shows.App.Avalonia.ViewModels;
 
 namespace Shows.App.Avalonia.Views;
@@ -16,8 +18,17 @@ public partial class ShowDetailsView : UserControl
     }
 
     // The whole episode row is the watch toggle (MAUI's row tap gesture). The checkbox is display-only.
+    //
+    // The row's info button lives INSIDE the row, so its press bubbles here too — and a press meant to read
+    // a synopsis would silently un-watch the episode. The press is ignored when it started inside a button,
+    // which leaves the button free to open its own flyout (no event is swallowed, so the flyout still works).
     private void OnToggleEpisode(object? sender, PointerPressedEventArgs e)
     {
+        if (e.Source is Visual source && source.FindAncestorOfType<Button>(includeSelf: true) is not null)
+        {
+            return;
+        }
+
         if (sender is Control { DataContext: EpisodeRowViewModel vm })
         {
             vm.ToggleWatchedCommand.Execute(null);

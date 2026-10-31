@@ -38,12 +38,24 @@
                     <StackPanel Grid.Column="1" Spacing="4">
                         <TextBlock Classes="title" Text="{Binding PrimaryTitle}" TextWrapping="Wrap" />
                         <TextBlock Classes="subtitle" Text="{Binding SecondaryTitle}" IsVisible="{Binding HasSecondaryTitle}" TextWrapping="Wrap" />
-                        <StackPanel Orientation="Horizontal" Spacing="8">
+                        <!-- Title line chips: the user's own (status, their 1-10 rating), a dot, then the grey
+                             catalog chips (country, TVmaze's rating) — the same run the list cards show, so a
+                             show reads identically on the list and on its details page. Each element carries
+                             its own IsVisible and the dot is gated on both sides, so the line never opens or
+                             closes with a separator. -->
+                        <StackPanel Orientation="Horizontal" Spacing="6">
                             <Border Classes="chip" IsVisible="{Binding StatusText, Converter={StaticResource IsNotNull}}">
                                 <TextBlock Classes="chip" Text="{Binding StatusText}" />
                             </Border>
-                            <Border Classes="chip" IsVisible="{Binding RatingText, Converter={StaticResource IsNotNull}}">
-                                <TextBlock Classes="chip" Text="{Binding RatingText, StringFormat='★ {0}'}" />
+                            <Border Classes="chip rating" IsVisible="{Binding HasUserRating}">
+                                <TextBlock Classes="chip rating" Text="{Binding UserRatingChipText}" />
+                            </Border>
+                            <TextBlock Classes="chipDot" Text="·" IsVisible="{Binding ShowChipSeparator}" />
+                            <Border Classes="chip" IsVisible="{Binding CountryText, Converter={StaticResource IsNotNull}}">
+                                <TextBlock Classes="chip" Text="{Binding CountryText}" />
+                            </Border>
+                            <Border Classes="chip" IsVisible="{Binding RatingChipText, Converter={StaticResource IsNotNull}}">
+                                <TextBlock Classes="chip" Text="{Binding RatingChipText}" />
                             </Border>
                         </StackPanel>
                         <TextBlock Classes="subtitle" Text="{Binding GenresText}" TextWrapping="Wrap" />
@@ -140,22 +152,86 @@
                                 <ItemsControl ItemsSource="{Binding Episodes}" Margin="6,0,0,0">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="vm:EpisodeRowViewModel">
+                                            <!-- Episode row. The S/E marker sits at the TOP (it aligns with the
+                                                 title line, not the row's middle), with the runtime under it in
+                                                 small grey type. The title line carries the air date, the
+                                                 watched date (tracked shows only) and TVmaze's episode rating;
+                                                 the synopsis is the second line, truncated to one. The info
+                                                 button is the only right-hand element and is vertically
+                                                 centred — it opens the still and the full synopsis.
+
+                                                 The whole row stays the watch toggle; the button is excluded
+                                                 from that hit test so opening the popup does not flip the
+                                                 watched mark. -->
                                             <Border Classes="row">
                                                 <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="8"
                                                       Background="Transparent" PointerPressed="OnToggleEpisode">
                                                     <CheckBox Grid.Column="0" IsChecked="{Binding IsWatched}"
-                                                              IsHitTestVisible="False" />
-                                                    <TextBlock Grid.Column="1" Text="{Binding NumberText}" VerticalAlignment="Center"
-                                                               FontWeight="Bold" FontSize="12" />
-                                                    <StackPanel Grid.Column="2" Spacing="0">
-                                                        <TextBlock Text="{Binding PrimaryTitle}" FontSize="13" TextWrapping="Wrap" />
+                                                              IsHitTestVisible="False" VerticalAlignment="Center" />
+                                                    <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Top">
+                                                        <TextBlock Text="{Binding NumberText}" FontWeight="Bold" FontSize="12" />
+                                                        <TextBlock Text="{Binding RuntimeText}" FontSize="10"
+                                                                   Foreground="{DynamicResource TextMutedBrush}"
+                                                                   IsVisible="{Binding RuntimeText, Converter={StaticResource IsNotNull}}" />
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="2" Spacing="1">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                                            <TextBlock Text="{Binding PrimaryTitle}" FontSize="13"
+                                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Classes="chipDot" Text="·" FontSize="11"
+                                                                       IsVisible="{Binding AirDateText, Converter={StaticResource IsNotNull}}" />
+                                                            <TextBlock Text="{Binding AirDateText}" FontSize="11" Opacity="0.6"
+                                                                       VerticalAlignment="Center"
+                                                                       IsVisible="{Binding AirDateText, Converter={StaticResource IsNotNull}}" />
+                                                            <!-- Watched date: only a tracked show has watch state, and
+                                                                 only a watched row has a timestamp to show. -->
+                                                            <TextBlock Classes="chipDot" Text="·" FontSize="11"
+                                                                       IsVisible="{Binding WatchedAtText, Converter={StaticResource IsNotNull}}" />
+                                                            <TextBlock Text="{Binding WatchedAtText}" FontSize="11"
+                                                                       Foreground="{DynamicResource AccentBrush}" Opacity="0.85"
+                                                                       VerticalAlignment="Center"
+                                                                       IsVisible="{Binding WatchedAtText, Converter={StaticResource IsNotNull}}" />
+                                                            <Border Classes="chip" VerticalAlignment="Center"
+                                                                    IsVisible="{Binding RatingText, Converter={StaticResource IsNotNull}}">
+                                                                <TextBlock Classes="chip" Text="{Binding RatingText, StringFormat='★ {0}'}" />
+                                                            </Border>
+                                                            <TextBlock Text="special" FontSize="11" VerticalAlignment="Center"
+                                                                       IsVisible="{Binding IsSpecial}" Opacity="0.6" />
+                                                        </StackPanel>
                                                         <TextBlock Text="{Binding SecondaryTitle}" FontSize="11"
                                                                    IsVisible="{Binding HasSecondaryTitle}" Opacity="0.6" />
-                                                        <TextBlock Text="{Binding AirDateText}" FontSize="11"
-                                                                   IsVisible="{Binding AirDateText, Converter={StaticResource IsNotNull}}" Opacity="0.6" />
+                                                        <!-- The synopsis the page had room for (user request: the
+                                                             details page is mostly empty space). One line here,
+                                                             the full text in the popup. Hidden when TVmaze has
+                                                             none, so no empty line is reserved. -->
+                                                        <TextBlock Text="{Binding DescriptionText}" FontSize="11"
+                                                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                                                   TextTrimming="CharacterEllipsis" MaxLines="1"
+                                                                   IsVisible="{Binding HasDescription}" />
                                                     </StackPanel>
-                                                    <TextBlock Grid.Column="3" Text="special" FontSize="11" VerticalAlignment="Center"
-                                                               IsVisible="{Binding IsSpecial}" Opacity="0.6" />
+                                                    <!-- Info button: only when the popup would contain something.
+                                                         The flyout is attached through Button.Flyout, NOT as the
+                                                         button's child: Flyout is not a Control, so as a child it
+                                                         would become Button.Content (hiding the ⓘ glyph) and the
+                                                         popup would never open. The presenter is parented to the
+                                                         placement target, so the bindings inside resolve against
+                                                         this row's VM. -->
+                                                    <Button Grid.Column="3" Classes="info"
+                                                            VerticalAlignment="Center"
+                                                            IsVisible="{Binding HasInfo}">
+                                                        <Button.Flyout>
+                                                            <Flyout Placement="Right">
+                                                                <StackPanel Spacing="8" MaxWidth="360">
+                                                                    <Image Width="320" Stretch="Uniform"
+                                                                           IsVisible="{Binding HasImage}"
+                                                                           local:ImageBehavior.Url="{Binding ImageUrl}" />
+                                                                    <TextBlock Text="{Binding FullDescription}" FontSize="12"
+                                                                               TextWrapping="Wrap"
+                                                                               IsVisible="{Binding HasDescription}" />
+                                                                </StackPanel>
+                                                            </Flyout>
+                                                        </Button.Flyout>
+                                                    </Button>
                                                 </Grid>
                                             </Border>
                                         </DataTemplate>
@@ -177,20 +253,63 @@
                     <ItemsControl ItemsSource="{Binding Specials}" Margin="6,0,0,0">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:EpisodeRowViewModel">
+                                <!-- Same row shape as the season grid above (see the notes there). -->
                                 <Border Classes="row">
                                     <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="8"
                                           Background="Transparent" PointerPressed="OnToggleEpisode">
                                         <CheckBox Grid.Column="0" IsChecked="{Binding IsWatched}"
-                                                  IsHitTestVisible="False" />
-                                        <TextBlock Grid.Column="1" Text="{Binding NumberText}" VerticalAlignment="Center"
-                                                   FontWeight="Bold" FontSize="12" />
-                                        <StackPanel Grid.Column="2" Spacing="0">
-                                            <TextBlock Text="{Binding PrimaryTitle}" FontSize="13" TextWrapping="Wrap" />
+                                                  IsHitTestVisible="False" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Top">
+                                            <TextBlock Text="{Binding NumberText}" FontWeight="Bold" FontSize="12" />
+                                            <TextBlock Text="{Binding RuntimeText}" FontSize="10"
+                                                       Foreground="{DynamicResource TextMutedBrush}"
+                                                       IsVisible="{Binding RuntimeText, Converter={StaticResource IsNotNull}}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2" Spacing="1">
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <TextBlock Text="{Binding PrimaryTitle}" FontSize="13"
+                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Classes="chipDot" Text="·" FontSize="11"
+                                                           IsVisible="{Binding AirDateText, Converter={StaticResource IsNotNull}}" />
+                                                <TextBlock Text="{Binding AirDateText}" FontSize="11" Opacity="0.6"
+                                                           VerticalAlignment="Center"
+                                                           IsVisible="{Binding AirDateText, Converter={StaticResource IsNotNull}}" />
+                                                <TextBlock Classes="chipDot" Text="·" FontSize="11"
+                                                           IsVisible="{Binding WatchedAtText, Converter={StaticResource IsNotNull}}" />
+                                                <TextBlock Text="{Binding WatchedAtText}" FontSize="11"
+                                                           Foreground="{DynamicResource AccentBrush}" Opacity="0.85"
+                                                           VerticalAlignment="Center"
+                                                           IsVisible="{Binding WatchedAtText, Converter={StaticResource IsNotNull}}" />
+                                                <Border Classes="chip" VerticalAlignment="Center"
+                                                        IsVisible="{Binding RatingText, Converter={StaticResource IsNotNull}}">
+                                                    <TextBlock Classes="chip" Text="{Binding RatingText, StringFormat='★ {0}'}" />
+                                                </Border>
+                                                <TextBlock Text="special" FontSize="11" VerticalAlignment="Center"
+                                                           IsVisible="{Binding IsSpecial}" Opacity="0.6" />
+                                            </StackPanel>
                                             <TextBlock Text="{Binding SecondaryTitle}" FontSize="11"
                                                        IsVisible="{Binding HasSecondaryTitle}" Opacity="0.6" />
+                                            <TextBlock Text="{Binding DescriptionText}" FontSize="11"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                                       TextTrimming="CharacterEllipsis" MaxLines="1"
+                                                       IsVisible="{Binding HasDescription}" />
                                         </StackPanel>
-                                        <TextBlock Grid.Column="3" Text="special" FontSize="11" VerticalAlignment="Center"
-                                                   IsVisible="{Binding IsSpecial}" Opacity="0.6" />
+                                        <Button Grid.Column="3" Classes="info"
+                                                VerticalAlignment="Center"
+                                                IsVisible="{Binding HasInfo}">
+                                            <Button.Flyout>
+                                                <Flyout Placement="Right">
+                                                    <StackPanel Spacing="8" MaxWidth="360">
+                                                        <Image Width="320" Stretch="Uniform"
+                                                               IsVisible="{Binding HasImage}"
+                                                               local:ImageBehavior.Url="{Binding ImageUrl}" />
+                                                        <TextBlock Text="{Binding FullDescription}" FontSize="12"
+                                                                   TextWrapping="Wrap"
+                                                                   IsVisible="{Binding HasDescription}" />
+                                                    </StackPanel>
+                                                </Flyout>
+                                            </Button.Flyout>
+                                        </Button>
                                     </Grid>
                                 </Border>
                             </DataTemplate>

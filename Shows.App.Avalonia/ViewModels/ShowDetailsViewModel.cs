@@ -139,7 +139,37 @@ public sealed partial class ShowDetailsViewModel : ObservableObject
     public bool HasDescription => !string.IsNullOrEmpty(Description);
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(RatingChipText))]
+    [NotifyPropertyChangedFor(nameof(HasTitleMetaChips))]
+    [NotifyPropertyChangedFor(nameof(ShowChipSeparator))]
     private string? _ratingText;
+
+    /// <summary>
+    /// TVmaze's catalog rating as a grey chip on the title line (user request), next to the country. The
+    /// user's own 1-10 rating is the separate star widget below; the two must not be confused.
+    /// </summary>
+    public string? RatingChipText =>
+        RatingText is { Length: > 0 } rating ? "\u2605 " + rating : null;
+
+    /// <summary>
+    /// The country as a grey chip on the title line. The mapped column already carries the language fallback
+    /// (<see cref="CountryRules"/>, improvement 21), so the UI never re-derives it.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasTitleMetaChips))]
+    [NotifyPropertyChangedFor(nameof(ShowChipSeparator))]
+    private string? _countryText;
+
+    /// <summary>Whether the grey chip group after the dot has anything to show.</summary>
+    public bool HasTitleMetaChips => !string.IsNullOrEmpty(CountryText) || RatingChipText is not null;
+
+    /// <summary>
+    /// The dot between the user's own chips (status, their rating) and the catalog chips (country, TVmaze
+    /// rating). Shown only when there is something on both sides, so the header never starts or ends with a
+    /// separator.
+    /// </summary>
+    public bool ShowChipSeparator =>
+        (!string.IsNullOrEmpty(StatusText) || HasUserRating) && HasTitleMetaChips;
 
     // The show's current category (issue 8). Drives the category picker on the details page: the page
     // shows this and disables the matching button, and offers only Started / Later / Cancelled as move
@@ -216,7 +246,16 @@ public sealed partial class ShowDetailsViewModel : ObservableObject
 
     /// <summary>The user's current rating (1..10), or null when unrated. Drives which stars are filled.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(UserRatingChipText))]
+    [NotifyPropertyChangedFor(nameof(HasUserRating))]
+    [NotifyPropertyChangedFor(nameof(ShowChipSeparator))]
     private int? _userRating;
+
+    /// <summary>The user's rating as a highlighted chip on the title line, matching the list cards. Null hides it.</summary>
+    public string? UserRatingChipText =>
+        UserRating is { } rating ? "\u2605 " + rating.ToString(CultureInfo.InvariantCulture) : null;
+
+    public bool HasUserRating => UserRating is not null;
 
     /// <summary>
     /// Apply a star click. Clicking the star at the current rating clears the rating (a second click on the
@@ -323,24 +362,11 @@ public sealed partial class ShowDetailsViewModel : ObservableObject
                 genreParts.AddRange(show.Genres.Select(g => g.Name));
                 GenresText = string.Join(", ", genreParts);
             }
-            // Network and web-channel are mutually exclusive on the source (SPEC); show whichever is set,
-            // followed by the country. The country is the mapped column, which already carries the language
-            // fallback (CountryRules, improvement 21) — a Korean Netflix drama with no broadcaster country
-            // reads "Netflix · Korean" here exactly as its Discovery card does. The UI never re-derives it.
-            {
-                var networkParts = new List<string>();
-                if (!string.IsNullOrWhiteSpace(show.NetworkName ?? show.WebchannelName))
-                {
-                    networkParts.Add(show.NetworkName ?? show.WebchannelName!);
-                }
-
-                if (!string.IsNullOrWhiteSpace(show.Country))
-                {
-                    networkParts.Add(show.Country!);
-                }
-
-                NetworkText = networkParts.Count > 0 ? string.Join("  ·  ", networkParts) : null;
-            }
+            // Network and web-channel are mutually exclusive on the source (SPEC); show whichever is set. The
+            // country is no longer appended here — it is a chip on the title line with the TVmaze rating
+            // (user request), where a long genre list cannot push it out of sight.
+            NetworkText = show.NetworkName ?? show.WebchannelName;
+            CountryText = string.IsNullOrWhiteSpace(show.Country) ? null : show.Country!;
             // Air date: the premiere date, with the weekly schedule days appended when known.
             AirDateText = FormatAirDate(show);
             Description = show.Description;
@@ -403,7 +429,10 @@ public sealed partial class ShowDetailsViewModel : ObservableObject
                         details.WatchedEpisodeIds.Contains(special.Id),
                         _scopeFactory,
                         TrackedShowId,
-                        OnEpisodeToggled));
+                        OnEpisodeToggled,
+                        watchedAt: details.WatchedAtByEpisodeId.TryGetValue(special.Id, out var specialAt)
+                            ? specialAt
+                            : null));
                 }
 
                 if (counted.Count == 0)
@@ -418,7 +447,8 @@ public sealed partial class ShowDetailsViewModel : ObservableObject
                     details.ExpandedSeasons.GetValueOrDefault(season.Id),
                     _scopeFactory,
                     TrackedShowId,
-                    OnEpisodeToggled));
+                    OnEpisodeToggled,
+                    watchedAtByEpisodeId: details.WatchedAtByEpisodeId));
             }
 
             MainThread.BeginInvokeOnMainThread(() =>

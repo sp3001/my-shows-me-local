@@ -89,5 +89,13 @@ public sealed record EpisodeCatalogInfo(
     int? RuntimeMinutes,
     string? ImageUrl,
     string? ImageMediumUrl,
-    string? SummaryHtml,
-    string? ImdbId);
+    /// <summary>
+    /// The episode synopsis with TVmaze's markup <b>already stripped</b>. Unlike <c>TypeRaw</c> (a vocabulary
+    /// the mapper must translate at one point of contact), this is display text for the untracked details
+    /// page, so it is stripped here exactly as <see cref="CatalogShow.Overview"/> is — the UI layer may not
+    /// name Infrastructure's stripper. Null when TVmaze has no summary.
+    /// </summary>
+    string? Summary,
+    string? ImdbId,
+    /// <summary>TVmaze's episode rating, null when the episode is unrated.</summary>
+    double? RatingAverage = null);

@@ -29,15 +29,43 @@
                         VerticalAlignment="Top" />
 
                 <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Top">
-                    <!-- SPEC R3: localized primary, original beneath. The title is the tappable link to
+                    <!-- Title line: the title on the left, then the status chip, a dot, and the grey catalog
+                         chips (country, TVmaze's rating) on the right. They sit here rather than at the end
+                         of the meta line because a long genre list used to push them off a trimmed line
+                         (user request).
+
+                         Star + Auto columns, not a horizontal StackPanel: the Auto column takes the chips'
+                         width first, so they are ALWAYS visible, and the star column leaves the title
+                         whatever is left — where it wraps onto more lines rather than being clipped. A
+                         StackPanel would push the chips off the right edge of a long title instead.
+
+                         SPEC R3: localized primary, original beneath. The title is the tappable link to
                          details (tracked shows → tracked-details page, untracked → catalog page); on the
-                         details page itself the card renders the title as plain text (ShowTitleLink). -->
-                    <TextBlock Classes="link" Text="{Binding PrimaryTitle}" FontSize="16" FontWeight="Bold"
-                               TextWrapping="Wrap" IsVisible="{Binding ShowTitleLink}"
-                               PointerPressed="OnOpenDetails" />
-                    <TextBlock Text="{Binding PrimaryTitle}" FontSize="16" FontWeight="Bold" TextWrapping="Wrap"
-                               Foreground="{DynamicResource TextPrimaryBrush}"
-                               IsVisible="{Binding ShowTitleLink, Converter={StaticResource InvertBool}}" />
+                         details page itself the card renders the title as plain text (ShowTitleLink) — both
+                         live in the star column, only one is visible, so the chips are not duplicated. -->
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <StackPanel Grid.Column="0" Spacing="0">
+                            <TextBlock Classes="link" Text="{Binding PrimaryTitle}" FontSize="16" FontWeight="Bold"
+                                       TextWrapping="Wrap" VerticalAlignment="Center"
+                                       IsVisible="{Binding ShowTitleLink}"
+                                       PointerPressed="OnOpenDetails" />
+                            <TextBlock Text="{Binding PrimaryTitle}" FontSize="16" FontWeight="Bold" TextWrapping="Wrap"
+                                       VerticalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}"
+                                       IsVisible="{Binding ShowTitleLink, Converter={StaticResource InvertBool}}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                            <Border Classes="chip" IsVisible="{Binding StatusText, Converter={StaticResource IsNotNull}}">
+                                <TextBlock Classes="chip" Text="{Binding StatusText}" />
+                            </Border>
+                            <TextBlock Classes="chipDot" Text="·" IsVisible="{Binding ShowChipSeparator}" />
+                            <Border Classes="chip" IsVisible="{Binding CountryText, Converter={StaticResource IsNotNull}}">
+                                <TextBlock Classes="chip" Text="{Binding CountryText}" />
+                            </Border>
+                            <Border Classes="chip" IsVisible="{Binding RatingChipText, Converter={StaticResource IsNotNull}}">
+                                <TextBlock Classes="chip" Text="{Binding RatingChipText}" />
+                            </Border>
+                        </StackPanel>
+                    </Grid>
                     <TextBlock Text="{Binding SecondaryTitle}" Classes="subtitle"
                                IsVisible="{Binding HasSecondaryTitle}" TextWrapping="Wrap" />
                     <TextBlock Text="{Binding MetaText}" Classes="subtitle"
@@ -56,7 +84,8 @@
             </Grid>
 
             <!-- Synopsis (user-issues 19 follow-up): fills the card's empty space. Plain text (the mapper
-                 strips the markup), capped to ~1000 chars by the view-model. Hidden when the show has none. -->
+                 strips the markup), capped to ~1000 chars by the view-model. Hidden when the show has none —
+                 no placeholder row is rendered for a show with no overview. -->
             <TextBlock Text="{Binding DescriptionText}" TextWrapping="Wrap" MaxLines="6"
                        TextTrimming="CharacterEllipsis" Opacity="0.85"
                        IsVisible="{Binding HasDescription}" />

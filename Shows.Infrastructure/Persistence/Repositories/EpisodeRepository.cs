@@ -149,6 +149,50 @@ public sealed class EpisodeRepository(ShowsDbContext context) : IEpisodeReposito
         return map;
     }
 
+    // Per-season runtime total for the Started card's season line ("4 · ~2h 30m"). Same displayable
+    // predicate as the count above (InlineEpisodeRules.IsListable), so the header's duration matches the
+    // episodes actually listed rather than the whole season. SUM ignores NULL runtime; a season whose
+    // episodes all lack runtime sums to NULL and is absent from the map, so the header shows no duration
+    // rather than "0 min". Batched (LINQ, not raw SQL) for the same reason as the batched count: the
+    // dynamic showIds list.
+    public async Task<IReadOnlyDictionary<long, int>> SumRuntimeBySeasonAsync(
+        long showId, DateOnly today, CancellationToken cancellationToken) =>
+        await SumRuntimeAsync(
+            context.Episodes.Where(e => e.ShowId == showId), today, cancellationToken);
+
+    public async Task<IReadOnlyDictionary<long, int>> SumRuntimeBySeasonForShowsAsync(
+        IReadOnlyList<long> showIds, DateOnly today, CancellationToken cancellationToken) =>
+        await SumRuntimeAsync(
+            context.Episodes.Where(e => showIds.Contains(e.ShowId)), today, cancellationToken);
+
+    // Shared body of the two runtime aggregates above: the caller supplies the show-scoped query, this
+    // applies the displayable filter and groups. Runtime is summed in minutes (the stored unit) and left
+    // for the UI to format — the Domain owns no display formatting for durations.
+    private async Task<IReadOnlyDictionary<long, int>> SumRuntimeAsync(
+        IQueryable<Episode> scoped, DateOnly today, CancellationToken cancellationToken)
+    {
+        var rows = await scoped
+            .Where(e => e.EpisodeType != EpisodeType.InsignificantSpecial
+                        && e.AirDate != null
+                        && e.AirDate <= today
+                        && !context.EpisodeWatches.Any(w => w.ShowId == e.ShowId && w.EpisodeId == e.Id))
+            .GroupBy(e => e.SeasonId)
+            .Select(g => new { SeasonId = g.Key, Minutes = g.Sum(e => e.RuntimeMinutes) })
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+
+        var map = new Dictionary<long, int>(rows.Count);
+        foreach (var row in rows)
+        {
+            if (row.Minutes is { } minutes && minutes > 0)
+            {
+                map[row.SeasonId] = minutes;
+            }
+        }
+
+        return map;
+    }
+
     // The most recent already-aired episode date per show (improvement 12). air_date is a DateOnly stored as
     // ISO yyyy-MM-dd TEXT, so a lexicographic MAX is a correct date max (the DateTimeOffset-in-LINQ landmine
     // does not apply to DateOnly). Filtered to aired-on-or-before-today so a future episode is not "last

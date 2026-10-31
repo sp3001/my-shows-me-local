@@ -24,19 +24,37 @@
                     Width="60" Height="86" VerticalAlignment="Top" />
 
             <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Top">
-                <!-- Title + status share one line (improvement 3); the title is the tappable link to
-                     details (issue 8), the pin toggle (improvement 18) sits at the far right. -->
+                <!-- Title + chips share one line (improvement 3). The title is the tappable link to details
+                     (issue 8) and the pin toggle (improvement 18) sits at the far right.
+
+                     Columns are star + Auto + Auto, NOT one horizontal StackPanel: the Auto columns take the
+                     chips' and the pin's width first, so the chips are ALWAYS visible, and the title gets
+                     what is left and wraps onto more lines. In a StackPanel the title would be measured at
+                     its full single-line width and the chips would be pushed off the right edge.
+
+                     The chip run is: the user's own chips (status, their 1-10 rating), a dot, then the grey
+                     catalog chips (country, TVmaze's rating). They live here rather than on the meta line
+                     because a long genre list used to push the country and rating off a trimmed line (user
+                     request). The dot and each chip carry their own IsVisible, so the line never opens or
+                     closes with a separator. -->
                 <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
-                        <TextBlock Classes="link" Text="{Binding PrimaryTitle}" FontSize="15" FontWeight="Bold"
-                                   VerticalAlignment="Center"
-                                   PointerPressed="OnOpenDetails" />
-                        <Border Classes="chip" VerticalAlignment="Center" IsVisible="{Binding StatusText, Converter={StaticResource IsNotNull}}">
+                    <TextBlock Grid.Column="0" Classes="link" Text="{Binding PrimaryTitle}" FontSize="15"
+                               FontWeight="Bold" TextWrapping="Wrap" VerticalAlignment="Center"
+                               PointerPressed="OnOpenDetails" />
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                        <Border Classes="chip" IsVisible="{Binding StatusText, Converter={StaticResource IsNotNull}}">
                             <TextBlock Classes="chip" Text="{Binding StatusText}" />
                         </Border>
                         <!-- The user's own rating (1-10) as a highlighted chip, next to status. Hidden when unrated. -->
-                        <Border Classes="chip rating" VerticalAlignment="Center" IsVisible="{Binding HasUserRating}">
+                        <Border Classes="chip rating" IsVisible="{Binding HasUserRating}">
                             <TextBlock Classes="chip rating" Text="{Binding UserRatingText, StringFormat='★ {0}'}" />
+                        </Border>
+                        <TextBlock Classes="chipDot" Text="·" IsVisible="{Binding ShowChipSeparator}" />
+                        <Border Classes="chip" IsVisible="{Binding CountryText, Converter={StaticResource IsNotNull}}">
+                            <TextBlock Classes="chip" Text="{Binding CountryText}" />
+                        </Border>
+                        <Border Classes="chip" IsVisible="{Binding RatingChipText, Converter={StaticResource IsNotNull}}">
+                            <TextBlock Classes="chip" Text="{Binding RatingChipText}" />
                         </Border>
                     </StackPanel>
                     <TextBlock Grid.Column="2" Text="{Binding PinText}" FontSize="12"
@@ -82,8 +100,20 @@
                                           Cursor="Hand" PointerPressed="OnToggleSeason">
                                         <TextBlock Grid.Column="0" Text="{Binding Header}"
                                                    FontSize="12" FontWeight="Bold" VerticalAlignment="Center" />
-                                        <TextBlock Grid.Column="1" Text="{Binding CountText}"
-                                                   FontSize="11" VerticalAlignment="Center" Opacity="0.6" />
+                                        <!-- "~3h 25m · N": how long the season takes, then how many episodes
+                                             are listed. The total leads because it is the number the user
+                                             scans for (user request). Both come from the same displayable set
+                                             (unwatched, already aired), so the two describe the same episodes.
+                                             The runtime is absent when TVmaze has none for that season, and the
+                                             dot hides with it so the count never opens with a separator. -->
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6"
+                                                    VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding RuntimeText}" FontSize="11" Opacity="0.6"
+                                                       IsVisible="{Binding RuntimeText, Converter={StaticResource IsNotNull}}" />
+                                            <TextBlock Classes="chipDot" Text="·" FontSize="11"
+                                                       IsVisible="{Binding RuntimeText, Converter={StaticResource IsNotNull}}" />
+                                            <TextBlock Text="{Binding CountText}" FontSize="11" Opacity="0.6" />
+                                        </StackPanel>
                                         <TextBlock Grid.Column="2" Text="{Binding Chevron}"
                                                    FontSize="14" VerticalAlignment="Center" Padding="10,6"
                                                    Margin="0,0,6,0"
@@ -103,12 +133,24 @@
                                                     <CheckBox Grid.Column="0" IsChecked="{Binding IsWatched}"
                                                               IsHitTestVisible="False"
                                                               VerticalAlignment="Center" />
-                                                    <TextBlock Grid.Column="1" Text="{Binding NumberText}"
-                                                               VerticalAlignment="Center" FontWeight="Bold" FontSize="11" />
+                                                    <TextBlock Grid.Column="1" Text="{Binding NumberText}" FontSize="11"
+                                                               FontWeight="Bold" VerticalAlignment="Center" />
                                                     <TextBlock Grid.Column="2" Text="{Binding PrimaryTitle}" FontSize="11"
                                                                VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Grid.Column="3" Text="{Binding AirDateText}" FontSize="11"
-                                                               VerticalAlignment="Center" Opacity="0.6" />
+                                                    <!-- The episode's runtime sits at the right, just before the
+                                                         air date (user request) — the row stays one line, and the
+                                                         per-episode figure reads left-to-right into the season
+                                                         header's total above it. Hidden when TVmaze has no runtime,
+                                                         and the dot hides with it. -->
+                                                    <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="6"
+                                                                VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding RuntimeText}" FontSize="11"
+                                                                   Foreground="{DynamicResource TextMutedBrush}"
+                                                                   IsVisible="{Binding RuntimeText, Converter={StaticResource IsNotNull}}" />
+                                                        <TextBlock Classes="chipDot" Text="·" FontSize="11"
+                                                                   IsVisible="{Binding RuntimeText, Converter={StaticResource IsNotNull}}" />
+                                                        <TextBlock Text="{Binding AirDateText}" FontSize="11" Opacity="0.6" />
+                                                    </StackPanel>
                                                 </Grid>
                                             </Border>
                                         </DataTemplate>

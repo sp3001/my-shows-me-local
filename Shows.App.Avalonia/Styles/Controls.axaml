@@ -59,6 +59,27 @@
         <Setter Property="Background" Value="{DynamicResource SurfaceHoverBrush}" />
     </Style>
 
+    <!-- The episode row's info button: a bare circled-i glyph, no chrome, that opens a flyout with the
+         episode still and full synopsis. Small and muted so it reads as a affordance on the row rather than
+         content; it only appears when the flyout would actually contain something (the view binds its
+         IsVisible to the row's HasInfo). -->
+    <Style Selector="Button.info">
+        <Setter Property="Content" Value="&#x24D8;" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+        <Setter Property="FontSize" Value="15" />
+        <Setter Property="Padding" Value="4,0" />
+        <Setter Property="MinHeight" Value="0" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.info:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource SurfaceHoverBrush}" />
+        <Setter Property="TextBlock.Foreground" Value="{DynamicResource AccentBrush}" />
+    </Style>
+
     <!-- ============ Text inputs ============ -->
 
     <Style Selector="TextBox">
@@ -138,6 +159,15 @@
     <Style Selector="TextBlock.chip">
         <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
         <Setter Property="FontSize" Value="11" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <!-- The separator between two chip groups on a title line (the user's own chips · the catalog chips).
+         Muted so it reads as punctuation, not content; each view binds its IsVisible to a view-model flag
+         so the line never opens or closes with a dangling dot. -->
+    <Style Selector="TextBlock.chipDot">
+        <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+        <Setter Property="FontSize" Value="13" />
         <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
 

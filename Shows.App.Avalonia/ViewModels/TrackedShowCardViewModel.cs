@@ -160,6 +160,13 @@ public sealed partial class TrackedShowCardViewModel : ObservableObject
             sb.Append('C').Append(kv.Key).Append('=').Append(kv.Value).Append(';');
         }
 
+        // Per-season runtime totals, sorted by season id. The season header renders this, so a refresh that
+        // fills in episode runtime must rebuild the card rather than reuse one showing a stale duration.
+        foreach (var kv in card.RuntimeMinutesBySeason.OrderBy(k => k.Key))
+        {
+            sb.Append('T').Append(kv.Key).Append('=').Append(kv.Value).Append(';');
+        }
+
         return sb.ToString();
     }
 
@@ -263,6 +270,34 @@ public sealed partial class TrackedShowCardViewModel : ObservableObject
         Show.RatingAverage?.ToString("0.0", CultureInfo.InvariantCulture);
 
     /// <summary>
+    /// The TVmaze rating as a <b>grey chip on the title line</b> (user request: it sat at the end of the meta
+    /// line, where a long genre list pushed it out of sight). Prefixed with the star glyph so it reads as a
+    /// rating without a label; null hides the chip.
+    /// </summary>
+    public string? RatingChipText => RatingText is { Length: > 0 } rating ? "\u2605 " + rating : null;
+
+    /// <summary>
+    /// The country as a grey chip on the title line. Read straight from the mapped column, which already
+    /// carries the language fallback (<see cref="CountryRules"/>, improvement 21) — the same label the details
+    /// page and the Discovery facet use. Null hides the chip.
+    /// </summary>
+    public string? CountryText =>
+        string.IsNullOrWhiteSpace(Show.Country) ? null : Show.Country!;
+
+    /// <summary>
+    /// The grey chips that follow the dot on the title line. Drives both the separator and the chip row, so
+    /// a show with neither a country nor a rating shows no dangling dot.
+    /// </summary>
+    public bool HasTitleMetaChips => CountryText is not null || RatingChipText is not null;
+
+    /// <summary>
+    /// The dot between the user's own chips (status, rating) and the catalog chips (country, TVmaze rating).
+    /// Shown only when there is something on both sides of it, so the line never starts or ends with a dot.
+    /// </summary>
+    public bool ShowChipSeparator =>
+        (StatusText.Length > 0 || HasUserRating) && HasTitleMetaChips;
+
+    /// <summary>
     /// The user's own 1-10 rating rendered as a highlighted chip on the card's first line (next to the
     /// status chip); null when the show is unrated, so the chip hides. Distinct from <see cref="RatingText"/>
     /// (TVmaze's catalog rating, shown on the meta line).
@@ -275,10 +310,10 @@ public sealed partial class TrackedShowCardViewModel : ObservableObject
     public bool HasUserRating => Show.UserRating is not null;
 
     /// <summary>
-    /// The card's meta line — year · genre · genre · country · ★rating — mirroring the discovery card's
-    /// dot-separated meta line (the tracked lists previously showed none of rating/genres/year). Assembled
-    /// here rather than in XAML so an absent part leaves no dangling separator (a Span has no IsVisible).
-    /// Status is deliberately not repeated here — it already renders as a chip beside the title.
+    /// The card's meta line — year · genre · genre. Assembled here rather than in XAML so an absent part
+    /// leaves no dangling separator (a Span has no IsVisible). Status, the user's rating, the country and
+    /// TVmaze's rating are deliberately not here — they are chips on the title line, where they stay visible
+    /// however long the genre list is.
     /// </summary>
     public string MetaText
     {
@@ -296,19 +331,6 @@ public sealed partial class TrackedShowCardViewModel : ObservableObject
                 {
                     parts.Add(genre.Name);
                 }
-            }
-
-            // The country after the genres (improvement 21). Read straight from the mapped column, which
-            // already carries the language fallback — the same label the details page and the Discovery
-            // facet use, so a show never reads one country on one page and nothing on another.
-            if (!string.IsNullOrWhiteSpace(Show.Country))
-            {
-                parts.Add(Show.Country!);
-            }
-
-            if (RatingText is { Length: > 0 } rating)
-            {
-                parts.Add("★" + rating);
             }
 
             return string.Join("  ·  ", parts);
@@ -453,7 +475,8 @@ public sealed partial class TrackedShowCardViewModel : ObservableObject
                     TrackedShowId,
                     OnEpisodeToggled,
                     removeWatchedOnToggle: true,
-                    onGroupEmptied: OnSeasonEmptied));
+                    onGroupEmptied: OnSeasonEmptied,
+                    runtimeMinutes: RuntimeFor(card, season.Id)));
             }
             else
             {
@@ -468,7 +491,8 @@ public sealed partial class TrackedShowCardViewModel : ObservableObject
                     _scopeFactory,
                     TrackedShowId,
                     OnEpisodeToggled,
-                    onGroupEmptied: OnSeasonEmptied));
+                    onGroupEmptied: OnSeasonEmptied,
+                    runtimeMinutes: RuntimeFor(card, season.Id)));
             }
         }
 
@@ -499,6 +523,11 @@ public sealed partial class TrackedShowCardViewModel : ObservableObject
     // The card's inline rows arrive pre-filtered (unwatched + already-aired) from the read model, so the
     // watched set is not consulted when building rows — an empty set keeps every given row.
     private static readonly IReadOnlySet<long> EmptyWatched = new HashSet<long>();
+
+    // The season's total runtime for its header, from the same batched read as the displayable count. Absent
+    // when the provider has no runtime for that season's episodes — the header then shows no duration.
+    private static int? RuntimeFor(CardSeasons card, long seasonId) =>
+        card.RuntimeMinutesBySeason.TryGetValue(seasonId, out var minutes) ? minutes : null;
 
     // The watch toggle's callback (fired by EpisodeRowViewModel after ToggleWatchedEpisodeUseCase runs).
     // Reflect the returned progress on the card's totals line — the card never recomputes (SPEC R5/R6).

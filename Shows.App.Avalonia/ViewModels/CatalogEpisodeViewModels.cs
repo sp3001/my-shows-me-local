@@ -1,5 +1,6 @@
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Shows.App.Avalonia.Services;
 
 namespace Shows.App.Avalonia.ViewModels;
 
@@ -36,6 +37,13 @@ public sealed class CatalogEpisodeViewModel
         IsSpecial = episode.IsSpecial;
         Title = string.IsNullOrWhiteSpace(episode.Title) ? "(untitled)" : episode.Title!;
         AirDateText = episode.AirDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        RatingText = episode.RatingAverage?.ToString("0.0", CultureInfo.InvariantCulture);
+        RuntimeText = RuntimeFormat.Episode(episode.RuntimeMinutes);
+        ImageUrl = episode.ImageUrl;
+        FullDescription = string.IsNullOrWhiteSpace(episode.Description)
+            ? null
+            : episode.Description!.Trim();
+        DescriptionText = Truncate(FullDescription);
 
         NumberText = IsSpecial
             ? EpisodeRowViewModel.SpecialGlyph
@@ -52,4 +60,49 @@ public sealed class CatalogEpisodeViewModel
     public string? AirDateText { get; }
 
     public bool IsSpecial { get; }
+
+    /// <summary>TVmaze's episode rating, e.g. "8.1"; null when unrated, so the chip hides.</summary>
+    public string? RatingText { get; }
+
+    /// <summary>The episode's runtime, e.g. "42 min"; null when the provider has none.</summary>
+    public string? RuntimeText { get; }
+
+    /// <summary>The episode still for the info popup; null when TVmaze has none.</summary>
+    public string? ImageUrl { get; }
+
+    public bool HasImage => !string.IsNullOrEmpty(ImageUrl);
+
+    /// <summary>The untruncated synopsis, shown in the info popup. Null when TVmaze has no summary.</summary>
+    public string? FullDescription { get; }
+
+    /// <summary>The synopsis capped to one trimmed line for the row body.</summary>
+    public string DescriptionText { get; }
+
+    public bool HasDescription => DescriptionText.Length > 0;
+
+    /// <summary>
+    /// Whether the row gets an info button: only when the popup would actually contain something, so a show
+    /// whose episodes have neither a synopsis nor a still keeps a clean row (user request — no icon when
+    /// there is nothing to show).
+    /// </summary>
+    public bool HasInfo => HasDescription || HasImage;
+
+    // Cap the row's synopsis line so a long TVmaze summary cannot grow the row past its two lines; the
+    // popup shows the full text. Cut at the last space before the limit so a word is never split.
+    private static string Truncate(string? text)
+    {
+        const int max = 160;
+        if (string.IsNullOrEmpty(text))
+        {
+            return string.Empty;
+        }
+
+        if (text.Length <= max)
+        {
+            return text;
+        }
+
+        var cut = text.LastIndexOf(' ', max);
+        return (cut > 0 ? text[..cut] : text[..max]).TrimEnd() + "…";
+    }
 }

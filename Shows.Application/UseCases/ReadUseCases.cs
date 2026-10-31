@@ -66,6 +66,10 @@ public sealed class GetLastAiredByShowUseCase(IEpisodeRepository episodes)
 /// <param name="Seasons">In season-number order, specials (0) first.</param>
 /// <param name="WatchedEpisodeIds">The ids the user has marked, so the grid can render toggles without
 /// a second round-trip per row.</param>
+/// <param name="WatchedAtByEpisodeId">When each watched episode was marked, for the details grid's
+/// "watched 2026-09-30" line (tracked shows only — an untracked catalog show has no watch state). The
+/// watch rows are already loaded for <see cref="WatchedEpisodeIds"/>, so this costs no extra query; the
+/// two are the same data seen two ways.</param>
 /// <param name="Mismatches">The show's recorded TVmaze/IMDb disagreements (step 7.3, ADR-031), shown on
 /// the details page so the user sees what IMDb offered that TVmaze did not keep. Empty when the show has
 /// no IMDb id or the enrichment has not run.</param>
@@ -75,7 +79,8 @@ public sealed record ShowDetails(
     IReadOnlyList<Episode> Episodes,
     IReadOnlySet<long> WatchedEpisodeIds,
     IReadOnlyDictionary<long, bool> ExpandedSeasons,
-    IReadOnlyList<EpisodeMismatch> Mismatches);
+    IReadOnlyList<EpisodeMismatch> Mismatches,
+    IReadOnlyDictionary<long, DateTimeOffset> WatchedAtByEpisodeId);
 
 /// <summary>
 /// Reads a show's details page, including persisted season expansion (SPEC R9).
@@ -107,7 +112,8 @@ public sealed class GetShowDetailsUseCase(
             showEpisodes,
             watches.Select(w => w.EpisodeId).ToHashSet(),
             states.ToDictionary(s => s.SeasonId, s => s.IsExpanded),
-            mismatches);
+            mismatches,
+            watches.ToDictionary(w => w.EpisodeId, w => w.WatchedAt));
     }
 }
 

@@ -95,6 +95,23 @@ public interface IEpisodeRepository
         IReadOnlyList<long> showIds, DateOnly today, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Per-season <b>total runtime in minutes</b> of the <em>displayable</em> episodes (the same predicate
+    /// as <see cref="InlineEpisodeRules.IsListable"/>), for one show. Keyed by <b>season id</b>. A season
+    /// whose episodes have no runtime at all is absent, so the header shows no duration rather than
+    /// "0 min". Computed, never stored (SPEC P5) — <c>episode.runtime_minutes</c> is per episode and the
+    /// card's season line is the only place the sum is needed.
+    /// </summary>
+    Task<IReadOnlyDictionary<long, int>> SumRuntimeBySeasonAsync(
+        long showId, DateOnly today, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The same per-season runtime total as <see cref="SumRuntimeBySeasonAsync"/>, for many shows in one
+    /// grouped query. Keyed by <b>season id</b> (globally unique), so the caller slices it per show.
+    /// </summary>
+    Task<IReadOnlyDictionary<long, int>> SumRuntimeBySeasonForShowsAsync(
+        IReadOnlyList<long> showIds, DateOnly today, CancellationToken cancellationToken);
+
+    /// <summary>
     /// The <b>upcoming</b> regular episodes of many shows at once (improvement 4's upcoming view): a
     /// regular whose air date is unknown (null) or strictly after <paramref name="today"/>. Specials are
     /// excluded (SPEC R4 — they live only on the details page). Ordering is left to the caller.

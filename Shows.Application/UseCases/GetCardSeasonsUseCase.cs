@@ -23,11 +23,15 @@ namespace Shows.Application.UseCases;
 /// <see cref="InlineEpisodeRules.IsListable"/>), computed eagerly for <b>every</b> season via a cheap
 /// grouped aggregate. The card uses it to drop zero-count seasons before they are ever shown and to render
 /// the header's "N left" text (issue 11) — without loading a collapsed season's rows.</param>
+/// <param name="RuntimeMinutesBySeason">Per-season total runtime (minutes) of the <b>displayable</b>
+/// episodes, so the season header can show how long what is left actually takes. Sparse: a season whose
+/// episodes carry no runtime is absent, and the header shows no duration. Computed, never stored (SPEC P5).</param>
 public sealed record CardSeasons(
     IReadOnlyList<Season> Seasons,
     IReadOnlySet<long> ExpandedSeasonIds,
     IReadOnlyDictionary<long, IReadOnlyList<Episode>> EpisodesByExpandedSeason,
-    IReadOnlyDictionary<long, int> DisplayableCountBySeason);
+    IReadOnlyDictionary<long, int> DisplayableCountBySeason,
+    IReadOnlyDictionary<long, int> RuntimeMinutesBySeason);
 
 /// <summary>
 /// Reads a card's seasons + expanded state + the filtered inline rows for the expanded seasons, and loads
@@ -89,7 +93,13 @@ public sealed class GetCardSeasonsUseCase(
             .CountDisplayableEpisodesBySeasonAsync(trackedShowId, today, cancellationToken)
             .ConfigureAwait(false);
 
-        return new CardSeasons(seasons, expandedIds, bySeason, counts);
+        // The season header's total duration, over the same displayable set as the count above so the two
+        // numbers describe the same episodes.
+        var runtime = await episodes
+            .SumRuntimeBySeasonAsync(trackedShowId, today, cancellationToken)
+            .ConfigureAwait(false);
+
+        return new CardSeasons(seasons, expandedIds, bySeason, counts, runtime);
     }
 
     /// <summary>
