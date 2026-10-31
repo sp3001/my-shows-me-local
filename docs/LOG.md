@@ -23,6 +23,132 @@ not verification for a data step — quote row counts.
 
 Newest entry first.
 
+### 2026-10-31 — improvement 26 — per-tab persisted sort, and the `Preferences` defect that had defeated it
+
+**Request.** User, verbatim: "make some ui changes / 1. Make sorting selection saved across app restarts on
+started and later tabs / 2. Reduce spacing between seasons and episodes in starting tab / 3. Move status,
+language and rating chips from right next to title, separated by dot (all lists)". Item 3 was ambiguous and was
+resolved by interview, verbatim: "they should be same line as the title, but without right alignment as it is
+now, it should be Title<dot separator>Ships" — chips stay on the title line but flow immediately after the
+title text instead of being pinned to the card's right edge.
+
+**Files changed.** `Shows.App.Avalonia/Services/Preferences.cs` (the defect fix),
+`Shows.App.Avalonia/ViewModels/TrackingViewModel.cs` (per-category key + restore),
+`Shows.App.Avalonia/ViewModels/{TrackedShowCardViewModel,ShowCardViewModel,ShowDetailsViewModel}.cs`
+(`ShowTitleChipSeparator`), `Shows.App.Avalonia/Views/{TrackedShowCardView,ShowCardView,ShowDetailsView,UpdatesRowView}.axaml`
+(`WrapPanel` chip run, tighter season/episode rows). 215 insertions / 99 deletions across 8 files.
+
+**The defect found on the way (this is what made item 1 impossible).** `Preferences` is a static singleton whose
+constructor loads the JSON store. `public static Preferences Default { get; }` was declared **above**
+`private static readonly string StorePath`, and C# runs static initializers in **declaration order** — so
+`Default`'s constructor called `Load()` while `StorePath` was still null. `File.Exists(null)` returns false,
+`Load()` returned an empty dictionary, and **every** saved preference silently read its default on every launch,
+while `Set` still wrote the right file. Improvement 12's "sort is saved across restarts" had therefore never
+worked: the file proved the write, and nothing had ever proved the read. Observed with a temporary probe in
+`Load()` and the `TrackingViewModel` constructor:
+
+```
+load MISSING path=
+ctor stored=-1 resolved=Name localAppData=C:\Users\aguze\AppData\Local exists=True raw={"started_sort":3,"later_sort":1}
+```
+
+`path=` is empty — the path did not exist yet at load time — while the same process, microseconds later, reads
+the identical file and finds the key. `StorePath` is now a **property**, evaluated at call time, with the reason
+recorded in a `<remarks>` block. After the fix, the same probe:
+
+```
+ctor stored=3 resolved=Last added localAppData=C:\Users\aguze\AppData\Local exists=True raw={"started_sort":3,"later_sort":1}
+```
+
+**Item 1 — per-tab sort.** `SortPreferenceKey` went from a `const string "started_sort"` to a `switch` over
+`ShowCategory` (`started_sort` / `later_sort` / `cancelled_sort` / `finished_sort`; an explicit switch, not
+string interpolation, because CA1308 rejects `ToLowerInvariant`). `RestoreSortOption(category)` assigns the
+generated `SelectedSortOption` property under a `_restoringSortOption` guard so the persist-and-resort hook does
+not (a) write the incoming tab's value under the **outgoing** category's key or (b) re-sort the cards still on
+screen. `OnSelectedCategoryChanged` restores before `_ = LoadAsync()`. MVVMTK0034 forced the property (not the
+`[ObservableProperty]` field) for those reads.
+
+**Verification.** Seeding the store and launching — `draft/verify-improvement-26-prefs.ps1 -Prefs
+'{"started_sort":3,"later_sort":1,"cancelled_sort":2,"finished_sort":0}' -HoldMs 9000`, with a temporary
+constructor probe that resolves every category key:
+
+```
+seeded: {"started_sort":3,"later_sort":1,"cancelled_sort":2,"finished_sort":0}
+while running: {"started_sort":3,"later_sort":1,"cancelled_sort":2,"finished_sort":0}
+restore Started key=started_sort stored=3 resolved=Last added
+restore Later key=later_sort stored=1 resolved=Air date
+restore Cancelled key=cancelled_sort stored=2 resolved=Last aired
+restore Finished key=finished_sort stored=0 resolved=Name
+```
+
+The visible combo was captured with PrintWindow (`draft/verify-improvement-26-sort.ps1`, cropped
+`-X 2330 -Y 130 -W 240 -H 70`): with `started_sort: 3` seeded, the Started combo reads **"Last added"**. To prove
+the *tab-switch* path without a working cursor, `RestoreSortOption(ShowCategory.Later)` was called temporarily
+from the constructor: the same crop then read **"Air date"** (Later's value) while the file stayed
+`{"started_sort":3,"later_sort":1}` **unchanged while running** — the restore swapped the visible combo and did
+not re-persist under Started's key. Both probes were then removed and the solution rebuilt.
+
+**Items 2 and 3 — layout.** The Started card tightened: outer `StackPanel Spacing 3→2`, the season list
+`Margin 0,4,0,0 → 0,2,0,0`, season `StackPanel Spacing 1→0`, season header `Padding 6,2`, chevron
+`Padding 10,6 → 10,3`, episode row `Padding 6,1`. The chip run in all four surfaces
+(`TrackedShowCardView`, `ShowCardView` — Search/Discovery — `ShowDetailsView`, `UpdatesRowView`) replaced the
+`Grid ColumnDefinitions="*,Auto"` + right-pinned `StackPanel`s with one
+`WrapPanel ItemSpacing="6" LineSpacing="2"` containing the title TextBlock, a dot, then the chips. The reason a
+`WrapPanel` works and a `StackPanel` does not is measurement: `WrapPanel.MeasureOverride` hands each child the
+**constraint** width, so a `TextWrapping="Wrap"` TextBlock returns its longest line and the following children
+land after the text (and wrap when they do not fit); a horizontal `StackPanel` measures a TextBlock at
+**infinite** width, which is what pushed the chips off-screen. Invisible children cost nothing in either panel —
+`Layoutable.MeasureCore` returns `Size()` when `IsVisible` is false, and `WrapPanel` skips `ItemSpacing` for
+them — so each card exposes `ShowTitleChipSeparator` (true when at least one chip renders) to hide the leading
+dot when there is no chip to lead. `UpdatesRowView` puts the dot **before** its chip for the same reason: a dot
+after the title could dangle at the end of a row with no status. `InlineUIContainer` was tried and rejected —
+`Inline` is a `TextElement`, not a `Control`, so it does not inherit `DataContext` reliably, and
+`InlineUIContainer` defaults to `BaselineAlignment.Top`.
+
+**Build and tests.**
+
+```
+> dotnet build Shows.sln -v q
+    0 Warning(s)
+    0 Error(s)
+> dotnet test Shows.Tests -v q
+Passed!  - Failed:     0, Passed:   386, Skipped:     0, Total:   386, Duration: 15 s - Shows.Tests.dll (net8.0)
+```
+
+**Screenshots** (`draft/`, PrintWindow at 2576×1416): `verify26-started.png` — `Lanterns · Running · ★ 7.2` and
+`Американская история ужасов · Running · ★ 7.4` with the chips immediately after the title, season/episode rows
+tighter; `verify26-later.png` — the Later list (shared `ShowCardView`) with the same chip flow, e.g.
+`A Shop for Killers · Ended · ★ 7.1`, and a card with no rating showing only `Afterworld · Ended` (no trailing
+dot); `verify26-oneclick.png` — the tracked-details header `Lanterns · Running · ★ 7.2` on one line.
+
+**Deviations.** (a) The plan was three UI changes; a fourth, unplanned change went in — the `Preferences`
+static-initialization fix — because item 1 cannot be true without it. It is not UI-only: **every** preference the
+app saves has been unreadable until now, so this also silently fixes any future preference. (b) The chip run's
+shape reverses the rule recorded in `STATE.md` for improvements 22–24 ("the chip run sits in a
+`Grid ColumnDefinitions=\"*,Auto\"`, never a `StackPanel`"). That rule was correct for *keeping the chips
+visible*; it is superseded for *placing them after the title*, because a `WrapPanel` keeps them visible **and**
+flows them inline. `STATE.md` was rewritten in the same commit. (c) No automated test covers any of this:
+`Shows.Tests` references Domain/Application/Infrastructure only, so Avalonia ViewModels are not reachable without
+a new project reference — verification is the seeded-store probe plus captures.
+
+**Environment fact (cost hours, worth recording).** On this RDP session **no synthetic mouse input reaches the
+Avalonia window**: `SetCursorPos` is a no-op (`GetCursorPos` returns 0,0), `GetForegroundWindow()` returns 0, so
+`SendInput` clicks are dropped, and `PostMessage`/`SendMessage` of `WM_LBUTTONDOWN`/`UP` do not enter Avalonia's
+own input pipeline either. Launch, `PrintWindow` capture and file probing work; clicking does not. Any UI
+verification here must be designed around that — seed state through a file or a temporary constructor call, then
+capture. Related trap: after `git stash pop` the on-disk exe is still the stashed build, so a capture taken
+before rebuilding shows the old layout. Full-window PNG hashes are **not** comparable between runs because
+posters load asynchronously.
+
+**New facts learned.** C# static initializers run in declaration order, so a static field declared below the
+static singleton that consumes it is null during that singleton's constructor — and `File.Exists(null)`/
+`File.ReadAllText(null)` fail quietly rather than loudly. `WrapPanel.MeasureOverride` passes the constraint
+width to children (a wrapping TextBlock returns its longest line), unlike `StackPanel`.
+
+**Unblocked.** Improvement 12's persisted sort now actually works and is the pattern for any future UI
+preference. The chip layout is now uniform across Started/Later/Cancelled/Finished cards, Search/Discovery
+cards, the tracked-details and search-details headers, and the Updates rows.
+
 ### 2026-10-31 — improvement 25 — the Updates tab, and the status-transition dates it needed (ADR-038, migration 0011)
 
 **Request.** User, verbatim: "Add one more tabs - updates, next to Finished. It should use simiar layout

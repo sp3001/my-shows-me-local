@@ -9,10 +9,9 @@ namespace Shows.App.Avalonia;
 
 /// <summary>
 /// Avalonia stand-in for <c>Microsoft.Maui.Essentials.Preferences</c>. The ViewModels use only
-/// <c>Preferences.Default.Get(key, default)</c> / <c>.Set(key, value)</c> for a single UI preference
-/// (the Started sort order, improvement 12) — a UI choice, not user data (SPEC P4), so it lives in a
-/// small JSON file rather than the database. Backed by a per-user app-data file so it survives
-/// relaunches like MAUI's Preferences.
+/// <c>Preferences.Default.Get(key, default)</c> / <c>.Set(key, value)</c> for UI choices — the per-tab sort
+/// orders (improvements 12 and 26) — not user data (SPEC P4), so they live in a small JSON file rather than
+/// the database. Backed by a per-user app-data file so they survive relaunches like MAUI's Preferences.
 /// </summary>
 /// <remarks>
 /// The MAUI call sites pass an <see cref="int"/> default and store an <see cref="int"/>. The shim keeps
@@ -23,7 +22,14 @@ public sealed class Preferences
 {
     public static Preferences Default { get; } = new Preferences();
 
-    private static readonly string StorePath = Path.Combine(
+    /// <remarks>
+    /// A property, not a field. Static initializers run in declaration order, so a field declared below
+    /// <see cref="Default"/> is still null when <see cref="Default"/>'s constructor calls <see cref="Load"/>:
+    /// <c>File.Exists(null)</c> is false, the store starts empty, and every preference silently reads its
+    /// default on every launch while writes still land in the right file. That is how improvement 12's
+    /// persisted sort looked like it worked (the file was written) but never did (the read missed it).
+    /// </remarks>
+    private static string StorePath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "Shows.App.Avalonia",
         "preferences.json");

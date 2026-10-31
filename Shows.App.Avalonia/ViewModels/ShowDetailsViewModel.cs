@@ -113,6 +113,7 @@ public sealed partial class ShowDetailsViewModel : ObservableObject
     public bool HasPoster => !string.IsNullOrEmpty(PosterUrl);
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowTitleChipSeparator))]
     private string? _statusText;
 
     [ObservableProperty]
@@ -142,6 +143,7 @@ public sealed partial class ShowDetailsViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(RatingChipText))]
     [NotifyPropertyChangedFor(nameof(HasTitleMetaChips))]
     [NotifyPropertyChangedFor(nameof(ShowChipSeparator))]
+    [NotifyPropertyChangedFor(nameof(ShowTitleChipSeparator))]
     private string? _ratingText;
 
     /// <summary>
@@ -158,6 +160,7 @@ public sealed partial class ShowDetailsViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasTitleMetaChips))]
     [NotifyPropertyChangedFor(nameof(ShowChipSeparator))]
+    [NotifyPropertyChangedFor(nameof(ShowTitleChipSeparator))]
     private string? _countryText;
 
     /// <summary>Whether the grey chip group after the dot has anything to show.</summary>
@@ -170,6 +173,13 @@ public sealed partial class ShowDetailsViewModel : ObservableObject
     /// </summary>
     public bool ShowChipSeparator =>
         (!string.IsNullOrEmpty(StatusText) || HasUserRating) && HasTitleMetaChips;
+
+    /// <summary>
+    /// The dot between the title and the chip run (improvement 26), matching the list cards. Hidden when the
+    /// header has no chip at all, so the title never ends with a dangling separator.
+    /// </summary>
+    public bool ShowTitleChipSeparator =>
+        !string.IsNullOrEmpty(StatusText) || HasUserRating || HasTitleMetaChips;
 
     // The show's current category (issue 8). Drives the category picker on the details page: the page
     // shows this and disables the matching button, and offers only Started / Later / Cancelled as move
@@ -249,6 +259,7 @@ public sealed partial class ShowDetailsViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(UserRatingChipText))]
     [NotifyPropertyChangedFor(nameof(HasUserRating))]
     [NotifyPropertyChangedFor(nameof(ShowChipSeparator))]
+    [NotifyPropertyChangedFor(nameof(ShowTitleChipSeparator))]
     private int? _userRating;
 
     /// <summary>The user's rating as a highlighted chip on the title line, matching the list cards. Null hides it.</summary>

@@ -76,11 +76,26 @@ terminal shows' end dates and all 554 `tvmaze_updated_at`, but the projected sec
 than 60 days, and no renewal has been observed since the mapper started observing them. **User action: run
 `StatusRecheck` and `RefreshUpdated`** (Manage page) to populate Renewed and refresh Updated Lately.
 `0011` is already applied to `data/shows.db` (the app applied it on start during this step).
+**Per-tab sort, tighter season rows and inline chips landed 2026-10-31** (improvement 26, `LOG.md`): the sort
+combo is now remembered **per tab** — `started_sort` / `later_sort` / `cancelled_sort` / `finished_sort` — and
+restored when the tab is selected, so switching Started → Later swaps the combo to Later's saved order without
+re-persisting it under Started's key (the change hook is suppressed while a tab switch restores). This required
+fixing a defect in `Services/Preferences.cs`: `Default` was declared **above** `StorePath`, and static
+initializers run in declaration order, so `Default`'s constructor called `Load()` while `StorePath` was still
+null — `File.Exists(null)` is false, the store always started empty, and **every** saved preference silently
+read its default on every launch while writes still landed in the right file. Improvement 12's persisted sort
+had therefore never worked. `StorePath` is now a property, evaluated at call time. The Started card also
+tightened (season/episode row padding and spacing), and the chip run no longer sits in a
+`Grid ColumnDefinitions="*,Auto"` pinned to the card's right edge: it is a `WrapPanel ItemSpacing="6"
+LineSpacing="2"` holding the title TextBlock, a dot, then the chips — so the chips follow the title text
+immediately and wrap to the next line when they do not fit. A `WrapPanel` measures a `TextWrapping="Wrap"`
+TextBlock at the constraint width (its longest line), which is what makes the following children land after the
+text; a `StackPanel` measures it at infinite width and pushes them off-screen. Each card exposes a
+`ShowTitleChipSeparator` so the dot before the first chip is hidden when no chip renders.
 **Title-line chips and fuller episode rows landed 2026-10-31** (improvements 22–24, `LOG.md`): every card and
 details header now carries `status · user rating · country · TVmaze rating` on the **title** line — the
 country and TVmaze rating moved off the meta line, which a long genre list used to push them off a trimmed
-row. The chip run sits in a `Grid ColumnDefinitions="*,Auto"`, never a `StackPanel`: a StackPanel measures
-the title at its full single-line width and pushes the chips off-screen. Details episode rows are two lines
+row. Details episode rows are two lines
 (marker top-aligned, `S8E22` with its runtime beneath; title · air date · watched date · rating; description
 beneath) with a `ⓘ` flyout carrying the still and the full synopsis — the flyout is attached through
 `<Button.Flyout>`, because a `<Flyout>` written as a Button **child** becomes `Button.Content` and the popup
@@ -190,7 +205,7 @@ transaction, four-branch watch backfill), proven by 12 integration tests on a te
 **not** been run against the real `data/shows.db` — that is the user's action; the DB was backed up to
 `backup/pre-promote-20260930-002807/` first.
 
-What is **not** built yet: the docker-readiness pass (8.3) and the consolidated integration-test pass (8.2) — **both postponed 2026-09-30** at the user's direction. Priority shifted to fixing the defects and UX gaps recorded in `docs/user-issues.md`; **every issue and improvement there is now done** (the last two — improvement 16, a time-based HTTP-cache fallback for validator-less responses, and improvement 20, TVmaze/IMDb links on the search-details page built from the id with the URL formats in `appsettings` — landed 2026-10-02; improvement 21, the country-from-language display fallback, landed 2026-10-07; improvements 22–24, the title-line chips and the fuller details/Started episode rows, landed 2026-10-31; improvement 25, the Updates tab and the status-transition dates it required, landed 2026-10-31; see `LOG.md`). Phase 8 can resume.
+What is **not** built yet: the docker-readiness pass (8.3) and the consolidated integration-test pass (8.2) — **both postponed 2026-09-30** at the user's direction. Priority shifted to fixing the defects and UX gaps recorded in `docs/user-issues.md`; **every issue and improvement there is now done** (the last two — improvement 16, a time-based HTTP-cache fallback for validator-less responses, and improvement 20, TVmaze/IMDb links on the search-details page built from the id with the URL formats in `appsettings` — landed 2026-10-02; improvement 21, the country-from-language display fallback, landed 2026-10-07; improvements 22–24, the title-line chips and the fuller details/Started episode rows, landed 2026-10-31; improvement 25, the Updates tab and the status-transition dates it required, landed 2026-10-31; improvement 26, per-tab persisted sort plus the `Preferences` static-init defect that had silently defeated it, landed 2026-10-31; see `LOG.md`). Phase 8 can resume.
 The `Enrichment` IMDb-driven mode (7.3) is now built (ADR-031 — see below).
 The two airing-catalog jobs —
 **7.1 `EpisodeRefresh` and 7.2 `StatusRecheck`** — are now built: one shared `ShowRefreshJob` body (select →

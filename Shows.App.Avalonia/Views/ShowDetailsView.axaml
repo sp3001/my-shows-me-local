@@ -36,28 +36,43 @@
                     <Border Grid.Column="0" Classes="poster" Width="150" Height="225" VerticalAlignment="Top"
                             IsVisible="{Binding HasPoster, Converter={StaticResource InvertBool}}" />
                     <StackPanel Grid.Column="1" Spacing="4">
-                        <TextBlock Classes="title" Text="{Binding PrimaryTitle}" TextWrapping="Wrap" />
-                        <TextBlock Classes="subtitle" Text="{Binding SecondaryTitle}" IsVisible="{Binding HasSecondaryTitle}" TextWrapping="Wrap" />
-                        <!-- Title line chips: the user's own (status, their 1-10 rating), a dot, then the grey
-                             catalog chips (country, TVmaze's rating) — the same run the list cards show, so a
-                             show reads identically on the list and on its details page. Each element carries
-                             its own IsVisible and the dot is gated on both sides, so the line never opens or
-                             closes with a separator. -->
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <Border Classes="chip" IsVisible="{Binding StatusText, Converter={StaticResource IsNotNull}}">
+                        <!-- Title + chips in one text-order flow (improvement 26), matching the list cards:
+                             the title, then the user's own chips (status, their 1-10 rating), a dot, then the
+                             grey catalog chips (country, TVmaze's rating) — so a show reads identically on
+                             the list and on its details page and the chips follow the title instead of
+                             sitting on a line of their own.
+
+                             A WrapPanel, not a horizontal StackPanel: the StackPanel would measure the title
+                             at its full single-line width and push the chips off the right edge, while a
+                             WrapPanel measures a wrapping TextBlock against the available width, so the
+                             chips take what is left of the title's line and wrap onto the next when there is
+                             none. Each element carries its own IsVisible and the dot is gated on both sides,
+                             so the line never opens or closes with a separator — an invisible child measures
+                             to nothing and costs no spacing. -->
+                        <WrapPanel ItemSpacing="6" LineSpacing="2" VerticalAlignment="Center">
+                            <TextBlock Classes="title" Text="{Binding PrimaryTitle}" TextWrapping="Wrap"
+                                       VerticalAlignment="Center" />
+                            <TextBlock Classes="chipDot" Text="·" VerticalAlignment="Center"
+                                       IsVisible="{Binding ShowTitleChipSeparator}" />
+                            <Border Classes="chip" VerticalAlignment="Center"
+                                    IsVisible="{Binding StatusText, Converter={StaticResource IsNotNull}}">
                                 <TextBlock Classes="chip" Text="{Binding StatusText}" />
                             </Border>
-                            <Border Classes="chip rating" IsVisible="{Binding HasUserRating}">
+                            <Border Classes="chip rating" VerticalAlignment="Center" IsVisible="{Binding HasUserRating}">
                                 <TextBlock Classes="chip rating" Text="{Binding UserRatingChipText}" />
                             </Border>
-                            <TextBlock Classes="chipDot" Text="·" IsVisible="{Binding ShowChipSeparator}" />
-                            <Border Classes="chip" IsVisible="{Binding CountryText, Converter={StaticResource IsNotNull}}">
+                            <TextBlock Classes="chipDot" Text="·" VerticalAlignment="Center"
+                                       IsVisible="{Binding ShowChipSeparator}" />
+                            <Border Classes="chip" VerticalAlignment="Center"
+                                    IsVisible="{Binding CountryText, Converter={StaticResource IsNotNull}}">
                                 <TextBlock Classes="chip" Text="{Binding CountryText}" />
                             </Border>
-                            <Border Classes="chip" IsVisible="{Binding RatingChipText, Converter={StaticResource IsNotNull}}">
+                            <Border Classes="chip" VerticalAlignment="Center"
+                                    IsVisible="{Binding RatingChipText, Converter={StaticResource IsNotNull}}">
                                 <TextBlock Classes="chip" Text="{Binding RatingChipText}" />
                             </Border>
-                        </StackPanel>
+                        </WrapPanel>
+                        <TextBlock Classes="subtitle" Text="{Binding SecondaryTitle}" IsVisible="{Binding HasSecondaryTitle}" TextWrapping="Wrap" />
                         <TextBlock Classes="subtitle" Text="{Binding GenresText}" TextWrapping="Wrap" />
                         <TextBlock Classes="subtitle" Text="{Binding NetworkText}" IsVisible="{Binding HasNetwork}" />
                         <TextBlock Classes="subtitle" Text="{Binding AirDateText}" IsVisible="{Binding HasAirDate}" />

@@ -65,9 +65,19 @@ public sealed partial class TrackingViewModel : ObservableObject
     private static readonly IReadOnlyDictionary<long, CardSeasons> EmptyCardSeasons =
         new Dictionary<long, CardSeasons>();
 
-    // The Preferences key under which the chosen Started sort is persisted across relaunches (improvement
-    // 12). MAUI Preferences (not the DB) — a sort choice is a UI preference, not user data (SPEC P4).
-    private const string SortPreferenceKey = "started_sort";
+    // The Preferences key under which a tab's chosen sort is persisted across relaunches (improvement 12).
+    // MAUI Preferences (not the DB) — a sort choice is a UI preference, not user data (SPEC P4). One key
+    // PER TAB (improvement 26): Started and Later both offer the sort control, and the order that is useful
+    // for the tracker is not the order wanted for the backlog. Started's key is the pre-existing
+    // "started_sort", so a choice saved before per-tab sorting existed still reads back.
+    private static string SortPreferenceKey(ShowCategory category) => category switch
+    {
+        ShowCategory.Started => "started_sort",
+        ShowCategory.Later => "later_sort",
+        ShowCategory.Cancelled => "cancelled_sort",
+        ShowCategory.Finished => "finished_sort",
+        _ => throw new ArgumentOutOfRangeException(nameof(category), category, "Unknown category."),
+    };
 
     [ObservableProperty]
     private CategoryTab _selectedCategory;
@@ -210,15 +220,40 @@ public sealed partial class TrackingViewModel : ObservableObject
     {
         _scopeFactory = scopeFactory;
         _selectedCategory = CategoryTabs[0];
-        _selectedSortOption = RestoreSortOption();
+        _selectedSortOption = ReadSortOption(_selectedCategory.Category);
     }
 
-    // Read the persisted Started sort (improvement 12). An unknown or missing value falls back to Name.
-    // Field assignment here does not fire OnSelectedSortOptionChanged, so it does not re-persist on launch.
-    private SortOption RestoreSortOption()
+    // Read a tab's persisted sort (improvement 12, per tab). An unknown or missing value falls back to Name.
+    private SortOption ReadSortOption(ShowCategory category)
     {
-        var stored = Preferences.Default.Get(SortPreferenceKey, (int)ShowSortOrder.Name);
+        var stored = Preferences.Default.Get(SortPreferenceKey(category), (int)ShowSortOrder.Name);
         return SortOptions.FirstOrDefault(o => o.Order == (ShowSortOrder)stored, SortOptions[0]);
+    }
+
+    // True only while a tab switch swaps the selected sort (see RestoreSortOption). The hook that persists
+    // the choice and re-sorts checks it: a swap is not a user decision, so it must not write the incoming
+    // tab's value under the OUTGOING category's key, and must not re-sort the cards still on screen.
+    private bool _restoringSortOption;
+
+    // Switch the selected sort to the incoming tab's saved choice (improvement 26). Assigns the observable
+    // property so the ComboBox follows, with the persist/re-sort hook suppressed for the duration.
+    private void RestoreSortOption(ShowCategory category)
+    {
+        var option = ReadSortOption(category);
+        if (ReferenceEquals(option, SelectedSortOption))
+        {
+            return;
+        }
+
+        _restoringSortOption = true;
+        try
+        {
+            SelectedSortOption = option;
+        }
+        finally
+        {
+            _restoringSortOption = false;
+        }
     }
 
     /// <summary>The active sort order, derived from the selected option (improvement 2).</summary>
@@ -245,14 +280,25 @@ public sealed partial class TrackingViewModel : ObservableObject
         // the right control.
         IsUpcoming = value.IsUpcoming;
         IsUpdates = value.IsUpdates;
+        // Each sortable tab shows the order the user last chose FOR THAT TAB (improvement 26).
+        RestoreSortOption(value.Category);
         _ = LoadAsync();
     }
 
     partial void OnSelectedSortOptionChanged(SortOption value)
     {
-        // Persist the chosen sort across relaunches (improvement 12). MAUI Preferences — a sort choice is a
-        // UI preference, not user data, so it does not belong in the DB (SPEC P4).
-        Preferences.Default.Set(SortPreferenceKey, (int)value.Order);
+        // A tab switch swapping in that tab's saved order (improvement 26) is not a user choice — see
+        // RestoreSortOption.
+        if (_restoringSortOption)
+        {
+            return;
+        }
+
+        // Persist the chosen sort across relaunches (improvement 12), under the tab that is currently
+        // loaded. MAUI Preferences — a sort choice is a UI preference, not user data, so it does not belong
+        // in the DB (SPEC P4). CurrentCategory is the loaded category, never the tab being switched to: a
+        // switch restores with the hook suppressed, so this only ever runs for the tab on screen.
+        Preferences.Default.Set(SortPreferenceKey(CurrentCategory), (int)value.Order);
         ApplyFilterAndSort();
     }
 

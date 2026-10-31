@@ -298,6 +298,15 @@ public sealed partial class TrackedShowCardViewModel : ObservableObject
         (StatusText.Length > 0 || HasUserRating) && HasTitleMetaChips;
 
     /// <summary>
+    /// The dot between the title and the chip run (improvement 26) — the chips follow the title's own text
+    /// instead of sitting at the card's right edge, and the dot is what marks the join. Shown only when at
+    /// least one chip renders, so a show with no chips never reads "Title ·". A tracked show always has a
+    /// status (the mapping fails closed to "Unknown"), so this is true in practice; the gate keeps the rule
+    /// stated rather than assumed.
+    /// </summary>
+    public bool ShowTitleChipSeparator => StatusText.Length > 0 || HasUserRating || HasTitleMetaChips;
+
+    /// <summary>
     /// The user's own 1-10 rating rendered as a highlighted chip on the card's first line (next to the
     /// status chip); null when the show is unrated, so the chip hides. Distinct from <see cref="RatingText"/>
     /// (TVmaze's catalog rating, shown on the meta line).

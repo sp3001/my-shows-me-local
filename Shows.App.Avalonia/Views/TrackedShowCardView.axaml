@@ -23,41 +23,55 @@
                     IsVisible="{Binding HasPoster, Converter={StaticResource InvertBool}}"
                     Width="60" Height="86" VerticalAlignment="Top" />
 
-            <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Top">
-                <!-- Title + chips share one line (improvement 3). The title is the tappable link to details
-                     (issue 8) and the pin toggle (improvement 18) sits at the far right.
+            <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Top">
+                <!-- Title + chips share one line (improvement 3, re-shaped by improvement 26). The title is
+                     the tappable link to details (issue 8) and the pin toggle (improvement 18) sits at the
+                     far right.
 
-                     Columns are star + Auto + Auto, NOT one horizontal StackPanel: the Auto columns take the
-                     chips' and the pin's width first, so the chips are ALWAYS visible, and the title gets
-                     what is left and wraps onto more lines. In a StackPanel the title would be measured at
-                     its full single-line width and the chips would be pushed off the right edge.
+                     The title and the chips are siblings in a WrapPanel, so they read in order —
+                     "Title · chips" — and the chips follow the title's own text width instead of being
+                     pushed to the right edge of the card (user request: they were right-aligned). A
+                     WrapPanel measures a wrapping TextBlock against the AVAILABLE width, so the title
+                     returns the width of its longest line and the chips take the rest of that line; when
+                     there is no rest, they wrap onto the next line rather than being clipped. The earlier
+                     Grid "*,Auto" pinned the chips to the right; a plain horizontal StackPanel would
+                     measure the title at its full single-line width and push the chips off-screen.
 
                      The chip run is: the user's own chips (status, their 1-10 rating), a dot, then the grey
                      catalog chips (country, TVmaze's rating). They live here rather than on the meta line
                      because a long genre list used to push the country and rating off a trimmed line (user
                      request). The dot and each chip carry their own IsVisible, so the line never opens or
-                     closes with a separator. -->
-                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                    <TextBlock Grid.Column="0" Classes="link" Text="{Binding PrimaryTitle}" FontSize="15"
-                               FontWeight="Bold" TextWrapping="Wrap" VerticalAlignment="Center"
-                               PointerPressed="OnOpenDetails" />
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                        <Border Classes="chip" IsVisible="{Binding StatusText, Converter={StaticResource IsNotNull}}">
+                     closes with a separator — an invisible child measures to nothing and costs no spacing.
+
+                     The pin stays in its own Auto column: it is an action, not content, and must not wrap
+                     into the text flow. -->
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                    <WrapPanel Grid.Column="0" ItemSpacing="6" LineSpacing="2" VerticalAlignment="Center">
+                        <TextBlock Classes="link" Text="{Binding PrimaryTitle}" FontSize="15"
+                                   FontWeight="Bold" TextWrapping="Wrap" VerticalAlignment="Center"
+                                   PointerPressed="OnOpenDetails" />
+                        <TextBlock Classes="chipDot" Text="·" VerticalAlignment="Center"
+                                   IsVisible="{Binding ShowTitleChipSeparator}" />
+                        <Border Classes="chip" VerticalAlignment="Center"
+                                IsVisible="{Binding StatusText, Converter={StaticResource IsNotNull}}">
                             <TextBlock Classes="chip" Text="{Binding StatusText}" />
                         </Border>
                         <!-- The user's own rating (1-10) as a highlighted chip, next to status. Hidden when unrated. -->
-                        <Border Classes="chip rating" IsVisible="{Binding HasUserRating}">
+                        <Border Classes="chip rating" VerticalAlignment="Center" IsVisible="{Binding HasUserRating}">
                             <TextBlock Classes="chip rating" Text="{Binding UserRatingText, StringFormat='★ {0}'}" />
                         </Border>
-                        <TextBlock Classes="chipDot" Text="·" IsVisible="{Binding ShowChipSeparator}" />
-                        <Border Classes="chip" IsVisible="{Binding CountryText, Converter={StaticResource IsNotNull}}">
+                        <TextBlock Classes="chipDot" Text="·" VerticalAlignment="Center"
+                                   IsVisible="{Binding ShowChipSeparator}" />
+                        <Border Classes="chip" VerticalAlignment="Center"
+                                IsVisible="{Binding CountryText, Converter={StaticResource IsNotNull}}">
                             <TextBlock Classes="chip" Text="{Binding CountryText}" />
                         </Border>
-                        <Border Classes="chip" IsVisible="{Binding RatingChipText, Converter={StaticResource IsNotNull}}">
+                        <Border Classes="chip" VerticalAlignment="Center"
+                                IsVisible="{Binding RatingChipText, Converter={StaticResource IsNotNull}}">
                             <TextBlock Classes="chip" Text="{Binding RatingChipText}" />
                         </Border>
-                    </StackPanel>
-                    <TextBlock Grid.Column="2" Text="{Binding PinText}" FontSize="12"
+                    </WrapPanel>
+                    <TextBlock Grid.Column="1" Text="{Binding PinText}" FontSize="12"
                                VerticalAlignment="Center" Padding="6,2" Cursor="Hand"
                                IsVisible="{Binding CanPin}"
                                Foreground="{DynamicResource AccentBrush}"
@@ -87,14 +101,17 @@
                 <!-- Seasons render directly (no card-level "Episodes" toggle). Each season is a collapsible
                      row: the header + chevron are tappable (ToggleCommand), and the episode rows show only
                      while expanded (IsExpanded). The expanded/collapsed state is persisted (R9). -->
-                <ItemsControl ItemsSource="{Binding Seasons}" Margin="0,4,0,0">
+                <!-- Season spacing (improvement 26): the tracker is a long scroll, so the gaps between a
+                     season header and its episodes are kept near-zero — the header's own padding and the
+                     chevron already separate the blocks visually. -->
+                <ItemsControl ItemsSource="{Binding Seasons}" Margin="0,2,0,0">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:SeasonGroupViewModel">
-                            <StackPanel Spacing="1">
+                            <StackPanel Spacing="0">
                                 <!-- The whole header row is the expand/collapse target (not just the chevron):
                                      a wide hit area that is easy to hit and sits clear of the ScrollViewer's
                                      scrollbar on the right. The chevron is purely visual. -->
-                                <Border Classes="row">
+                                <Border Classes="row" Padding="6,2">
                                     <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6"
                                           Background="Transparent"
                                           Cursor="Hand" PointerPressed="OnToggleSeason">
@@ -115,7 +132,7 @@
                                             <TextBlock Text="{Binding CountText}" FontSize="11" Opacity="0.6" />
                                         </StackPanel>
                                         <TextBlock Grid.Column="2" Text="{Binding Chevron}"
-                                                   FontSize="14" VerticalAlignment="Center" Padding="10,6"
+                                                   FontSize="14" VerticalAlignment="Center" Padding="10,3"
                                                    Margin="0,0,6,0"
                                                    Foreground="{DynamicResource AccentBrush}" />
                                     </Grid>
@@ -127,7 +144,7 @@
                                             <!-- The whole row is the watch toggle (MAUI's row tap gesture);
                                                  the checkbox is display-only (IsEnabled=False) and the
                                                  PointerPressed handler runs ToggleWatchedCommand. -->
-                                            <Border Classes="row">
+                                            <Border Classes="row" Padding="6,1">
                                                 <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="6"
                                                       Background="Transparent" PointerPressed="OnToggleEpisode">
                                                     <CheckBox Grid.Column="0" IsChecked="{Binding IsWatched}"

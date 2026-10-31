@@ -107,6 +107,13 @@ public sealed partial class ShowCardViewModel : ObservableObject
         StatusText is { Length: > 0 } && HasTitleMetaChips;
 
     /// <summary>
+    /// The dot between the title and the chip run (improvement 26): the chips read "Title · chips" in the
+    /// title's own flow rather than pinned to the card's right edge. Hidden when no chip renders, so the
+    /// title never ends with a dangling separator.
+    /// </summary>
+    public bool ShowTitleChipSeparator => StatusText is { Length: > 0 } || HasTitleMetaChips;
+
+    /// <summary>
     /// The card's meta line — just the year. Status and TVmaze's rating moved to chips on the title line
     /// (user request), and the genres have their own line, so this line is what is left of the old
     /// year · status · ★rating run. Assembled here rather than in XAML so an absent part leaves no dangling
