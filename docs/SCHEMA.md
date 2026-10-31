@@ -10,7 +10,11 @@ not_authoritative_for:
 ---
 # SCHEMA — SQLite Database Design
 
-Version 1.5, 2026-10-07. v1.5: **a show's display country falls back to its language** —
+Version 1.6, 2026-10-31. v1.6 adds **`tracked_show.status_changed_at`**,
+**`status_renewed_at`** and **`tvmaze_updated_at`** (ADR-038, migration `0011`) — the dates the Updates
+view reads. No provider serves a status-change timestamp, so the mapper records the transitions itself;
+an end is dated from the show's last aired episode, and `status_renewed_at` is not backfilled at all.
+v1.5: **a show's display country falls back to its language** —
 `tracked_show.country` (ADR-036), with `tvmaze_show.country_name`/`country_code` holding the
 broadcaster's country verbatim (SPEC R11).
 v1.4: the raw Discovery schedule archive is stored in the
@@ -184,6 +188,10 @@ thetvdb_id               INTEGER NULL
 poster_url               TEXT    NULL                -- image.original
 poster_medium_url        TEXT    NULL                -- image.medium
 mapped_at                TEXT    NULL                -- last mapper write
+-- status-transition dates: written by the mapper when it observes a transition (ADR-038)
+status_changed_at        TEXT    NULL                -- when the show became terminal ({Ended, Canceled})
+status_renewed_at        TEXT    NULL                -- when it left terminal into an airable status
+tvmaze_updated_at        TEXT    NULL                -- mapped copy of tvmaze_show.provider_updated
 -- derived caches: recomputed from episode + episode_watch, never authored
 watched_regular          INTEGER NOT NULL DEFAULT 0  -- cached, excludes specials
 total_regular            INTEGER NOT NULL DEFAULT 0  -- cached, excludes specials
@@ -212,6 +220,36 @@ carry `country: null` while `language` is filled. `country` therefore holds
 by the mapper so every read path agrees. It is a **mapped** column: the verbatim broadcaster country
 lives in `tvmaze_show.country_name`/`country_code`, and the fallback is never written there (R11). A
 show with neither is NULL, which is what the Discovery facet files as "Not set".
+
+**The three transition dates are mapper-written, and each is a fact the source cannot give you**
+(ADR-038). TVmaze payloads carry no status-change timestamp — probed across every stored show, 0 of 554
+have one — so the only way to know *when* a show ended or came back is to notice the transition when it
+happens.
+
+- `status_changed_at` is set when the show's status is terminal (`{Ended, Canceled}` — exactly
+  `ShowStatusRules.NoMoreEpisodesExpected`, SPEC R12; not Ended alone, since a cancelled show ended in
+  every sense the Updates view cares about). It is **dated from the last aired episode, not from the
+  moment we learned it**: a show whose finale aired in 2019 ended in 2019, and dating it from "today"
+  would put a show the user added this afternoon into "ended in the last 60 days". With no dated
+  episode to point at, the mapper writes the observation time once and holds it, then replaces that
+  placeholder as soon as `EpisodeRefresh` brings the finale — which is why the column is nullable and
+  why the 0011 backfill leaves an episode-less terminal row NULL rather than inventing a date.
+- `status_renewed_at` is set when the show moves **out of** terminal into an airable status. A first map
+  that is not terminal writes nothing: a new show has no prior status, so there is no transition to
+  record, and stamping one would list every newly-added show as renewed. A move to `Unknown` is a
+  vocabulary gap, not a renewal. Both dates survive the opposite transition, which is what a
+  `status_prev_id` column could not express — Ended → Running → Ended leaves the renewal in place and
+  re-dates the end.
+- `tvmaze_updated_at` is the **mapped copy** of `tvmaze_show.provider_updated`, the same relationship
+  `status_id` has to `status_raw`. It exists because the UI may not read a source table (SPEC P3/R11),
+  and it is not `mapped_at`: that column moves whenever *our* mapper recomputes something, while this
+  one moves only when TVmaze says the show changed. The mapper writes it unconditionally on every map
+  and does not count it as a change — source-mirror churn is not a mapped change.
+
+All three are backfilled by migration `0011` for rows that predate them: `status_changed_at` from each
+terminal show's last `episode.air_stamp`, `tvmaze_updated_at` from the source column, and
+`status_renewed_at` **not at all** — no renewal was ever observed before the mapper started observing
+them, and inventing one would put the whole library in the Renewed section.
 
 ### user_show
 The one row per tracked show that holds everything the user decided. **This table plus

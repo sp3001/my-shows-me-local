@@ -342,6 +342,14 @@ namespace Shows.Infrastructure.Persistence.Migrations
                         .HasColumnType("INTEGER")
                         .HasColumnName("status_id");
 
+                    b.Property<DateTimeOffset?>("StatusChangedAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("status_changed_at");
+
+                    b.Property<DateTimeOffset?>("StatusRenewedAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("status_renewed_at");
+
                     b.Property<int?>("TheTVDbId")
                         .HasColumnType("INTEGER")
                         .HasColumnName("the_tv_db_id");
@@ -362,6 +370,10 @@ namespace Shows.Infrastructure.Persistence.Migrations
                     b.Property<int>("TvmazeId")
                         .HasColumnType("INTEGER")
                         .HasColumnName("tvmaze_id");
+
+                    b.Property<DateTimeOffset?>("TvmazeUpdatedAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("tvmaze_updated_at");
 
                     b.Property<int>("WatchedRegular")
                         .HasColumnType("INTEGER")

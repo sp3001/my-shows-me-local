@@ -44,6 +44,15 @@ public interface ITrackedShowRepository
     /// <summary>Actively tracked shows only, ordered by title.</summary>
     Task<IReadOnlyList<TrackedShow>> ListActiveAsync(CancellationToken cancellationToken);
 
+    /// <summary>
+    /// The actively tracked shows among the given ids, ordered by title. The Updates tab's
+    /// recently-watched section starts from <c>episode_watch</c> rows, which outlive untracking
+    /// (ADR-024), so it needs an active-only lookup by id to drop a soft-deleted show's marks instead of
+    /// listing a show the user removed.
+    /// </summary>
+    Task<IReadOnlyList<TrackedShow>> ListActiveByIdsAsync(
+        IReadOnlyList<long> ids, CancellationToken cancellationToken);
+
     /// <summary>The category-tab query: <c>user_show</c> joined to <c>tracked_show</c>, active only (SPEC F4).</summary>
     Task<IReadOnlyList<TrackedShow>> ListActiveByCategoryAsync(
         ShowCategory category, CancellationToken cancellationToken);

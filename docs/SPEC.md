@@ -12,6 +12,10 @@ not_authoritative_for:
 ---
 # SPEC — Functional Specification
 
+Version 1.6, 2026-10-31. v1.6 extends **F4** with the **Updates** tab (improvement 25): four
+date-ordered sections over the tracked shows, whose dates are **mapper-observed status transitions**
+because no provider serves them (ADR-038). It is a view over the tracked shows, not a fifth category.
+
 Version 1.5, 2026-10-07. v1.5 adds **R15**: a show's displayed country falls back to its language
 when the broadcaster carries none (ADR-036). See ADR-036.
 
@@ -452,6 +456,35 @@ materialised locally, so it always reflects the live service.
 Four category tabs over `user_show` joined to `tracked_show`, filtered `deleted_at IS NULL`. Each tab
 is a virtualized list of tracked shows with poster, title, and progress
 `watched_regular / total_regular`. Expansion follows R9. Unwatched specials surface per R4.
+
+Two further tabs sit alongside the four categories and are **views over the same tracked shows, not
+fifth and sixth categories** — neither is a value of `user_show.category_id`, and neither is what a
+show "is", only what happened to it recently. Both reuse the tab strip and the list layout rather than
+introducing a second navigation surface.
+
+- **Upcoming** — every future-dated (or undated) episode of the actively tracked shows, grouped by air
+  date. Improvement 4.
+- **Updates** (improvement 25) — four date-ordered sections over the tracked shows, each with its own
+  window, and each reading a date the local database has to *record* rather than one any provider
+  serves (ADR-038):
+
+  | Section | Window | Ordered by | Shows |
+  |---|---|---|---|
+  | Ended Shows | 60 days | the date the show became terminal, desc | title, date |
+  | Renewed Shows | 60 days | the date it left terminal, desc | title, current status, date |
+  | Updated Lately | 30 days | TVmaze's own update timestamp, desc | title, date |
+  | Recently Watched | 30 days | `episode_watch.watched_at`, desc | title, `S#E#` episode title, date |
+
+  "Terminal" is the set `{Ended, Canceled}` — the same `NoMoreEpisodesExpected` test SPEC R12 already
+  owns, not a second definition. A cancelled show ended in every sense this view cares about, and a
+  show that ended, was renewed and ended again belongs in **Ended**, not Renewed: its renewal is
+  history, not its current state. An empty section is hidden rather than shown as a heading with
+  nothing under it.
+
+  The dates are **mapper-observed transitions**, so the view is only as complete as the jobs that
+  observe them: a show that ended before transitions were being recorded has an end date derived from
+  its last aired episode (the 0011 backfill), and a renewal nobody has observed yet simply does not
+  appear until `StatusRecheck` sees it.
 
 ### F5 — Details page
 Genres, description, poster, external links to IMDb and TVmaze, and the full season/episode grid

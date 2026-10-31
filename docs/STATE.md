@@ -23,7 +23,7 @@ not_authoritative_for:
 **Last updated:** 2026-10-31
 **Overall status:** **Phases 0–6 are complete; steps 7.1–7.5, 8.1 and 8.4 are done** — steps 0.1–0.8,
 1.1–1.6, 2.1–2.6, 3.1–3.2, 4.1–4.2, 5.1–5.3, 6.1, 7.1–7.5, 8.1 and 8.4 are done. Solution
-builds with zero warnings, 356 tests pass, all seven job shells run and exit 0, and the Avalonia UI head
+builds with zero warnings, 386 tests pass, all seven job shells run and exit 0, and the Avalonia UI head
 builds. The UI head is **Avalonia** (`Shows.App.Avalonia`); the MAUI head (`Shows.App`) was removed
 (ADR-033, supersedes ADR-001).
 **Discovery buckets corrected 2026-10-06** (user fix): *New* = any season-1 episode after `windowStart`,
@@ -55,6 +55,27 @@ reject an injected violation.
 Step **8.4** is done: Discovery's raw schedule archive is now stored in SQLite (`discovery_schedule_archive`)
 with its existing age-triggered layers and retention; old `cache/discovery` files remain untouched and
 are not imported (ADR-035).
+**The Updates tab landed 2026-10-31** (improvement 25, SPEC F4 v1.6, ADR-038, migration `0011`): a fifth
+tab next to Finished with four date-ordered sections — Ended Shows (60 days), Renewed Shows (60 days),
+Updated Lately (30 days), Recently Watched (30 days). It is a **view over the tracked shows, not a fifth
+category**: it borrows `Finished` as its tab-strip category and never touches `user_show.category_id`.
+The three dates it reads did not exist, because **no provider serves a status-change timestamp** (0 of the
+554 stored TVmaze payloads carry one), so the mapper now records the transitions itself:
+`tracked_show.status_changed_at` when a show becomes terminal (`{Ended, Canceled}` —
+`ShowStatusRules.NoMoreEpisodesExpected`, not Ended alone), `status_renewed_at` when it leaves terminal
+for an airable status, and `tvmaze_updated_at` as the mapped copy of `tvmaze_show.provider_updated` (the
+UI may not read a source table, SPEC P3/R11 — same relationship `status_id` has to `status_raw`). An end
+is dated from the **last aired episode**, not from the moment we noticed, so a show added today whose
+finale aired in 2019 does not appear as having ended this week; with no dated episode the mapper writes a
+placeholder once and replaces it when `EpisodeRefresh` brings the finale. `status_renewed_at` is
+deliberately **not** backfilled — nothing observed a renewal before this, and inventing dates would put
+the whole library in Renewed.
+**Expect the sections to look thin until the jobs run**: on the live DB the backfill filled 471 of 471
+terminal shows' end dates and all 554 `tvmaze_updated_at`, but the projected section counts are
+**Ended 1 / Renewed 0 / Updated 13 / Watched 51** — 470 shows are terminal but their finales are older
+than 60 days, and no renewal has been observed since the mapper started observing them. **User action: run
+`StatusRecheck` and `RefreshUpdated`** (Manage page) to populate Renewed and refresh Updated Lately.
+`0011` is already applied to `data/shows.db` (the app applied it on start during this step).
 **Title-line chips and fuller episode rows landed 2026-10-31** (improvements 22–24, `LOG.md`): every card and
 details header now carries `status · user rating · country · TVmaze rating` on the **title** line — the
 country and TVmaze rating moved off the meta line, which a long genre list used to push them off a trimmed
@@ -85,9 +106,10 @@ one-shot (`promoted_at` is set for all 547 rows), so this is prevention for a fu
 repair. **User action: run `draft/fix-import-watched-before-air.sql`** against `data/shows.db` — it
 deletes only marks made during the import on episodes that still have not aired, recomputes the four
 cached columns, and lists the ambiguous ones (aired since the import) for manual review in the app.
-The full SQLite schema is in place across ten migrations (`0001_MainSchema`, `0002_SourceSchema`,
+The full SQLite schema is in place across eleven migrations (`0001_MainSchema`, `0002_SourceSchema`,
 `0003_Staging`, `0004_StagingIssuesImdbWarning`, `0005_TvmazeAkas`, `0006_EpisodeMismatch`,
-`0007_UserShowIsPinned`, `0008_UserShowUserRating`, `0009_DiscoveryScheduleArchive`, `0010_ShowCountry`);
+`0007_UserShowIsPinned`, `0008_UserShowUserRating`, `0009_DiscoveryScheduleArchive`, `0010_ShowCountry`,
+`0011_ShowStatusTransitions`);
 `IdGenerator` / `WriterLease` / the migration gate exist;
 and the `TvmazeShowMapper` — the single mapped-row write path and the pivot of the plan — is built and
 tested, including the rebuild drill. Step 0.5 was unblocked when the .NET 8 MAUI packs were installed.
@@ -137,7 +159,7 @@ Application ← Infrastructure; the seven job consoles and the test project refe
 `ShowsDbContext` maps the mapped tables (`tracked_show`, `season`, `episode`, `genre`, `show_genre`),
 the user tables (`user_show`, `episode_watch`, `ui_season_state`), the bookkeeping/cache tables
 (`job_run`, `writer_lease`, `http_cache`, `discovery_schedule_archive`), the source tables
-(`tvmaze_*`, `imdb_*`), and the staging tables plus the `v_staging_issues` view — across ten migrations.
+(`tvmaze_*`, `imdb_*`), and the staging tables plus the `v_staging_issues` view — across eleven migrations.
 The repositories and `UnitOfWork` (1.4) assemble
 the `TrackedShow`/`UserShow` aggregate with the one `deleted_at IS NULL` filter. `IdGenerator` mints the
 client-generated keys (SCHEMA.md §1a), `SqliteWriterLease` coordinates concurrent bulk writers
@@ -168,7 +190,7 @@ transaction, four-branch watch backfill), proven by 12 integration tests on a te
 **not** been run against the real `data/shows.db` — that is the user's action; the DB was backed up to
 `backup/pre-promote-20260930-002807/` first.
 
-What is **not** built yet: the docker-readiness pass (8.3) and the consolidated integration-test pass (8.2) — **both postponed 2026-09-30** at the user's direction. Priority shifted to fixing the defects and UX gaps recorded in `docs/user-issues.md`; **every issue and improvement there is now done** (the last two — improvement 16, a time-based HTTP-cache fallback for validator-less responses, and improvement 20, TVmaze/IMDb links on the search-details page built from the id with the URL formats in `appsettings` — landed 2026-10-02; improvement 21, the country-from-language display fallback, landed 2026-10-07; improvements 22–24, the title-line chips and the fuller details/Started episode rows, landed 2026-10-31; see `LOG.md`). Phase 8 can resume.
+What is **not** built yet: the docker-readiness pass (8.3) and the consolidated integration-test pass (8.2) — **both postponed 2026-09-30** at the user's direction. Priority shifted to fixing the defects and UX gaps recorded in `docs/user-issues.md`; **every issue and improvement there is now done** (the last two — improvement 16, a time-based HTTP-cache fallback for validator-less responses, and improvement 20, TVmaze/IMDb links on the search-details page built from the id with the URL formats in `appsettings` — landed 2026-10-02; improvement 21, the country-from-language display fallback, landed 2026-10-07; improvements 22–24, the title-line chips and the fuller details/Started episode rows, landed 2026-10-31; improvement 25, the Updates tab and the status-transition dates it required, landed 2026-10-31; see `LOG.md`). Phase 8 can resume.
 The `Enrichment` IMDb-driven mode (7.3) is now built (ADR-031 — see below).
 The two airing-catalog jobs —
 **7.1 `EpisodeRefresh` and 7.2 `StatusRecheck`** — are now built: one shared `ShowRefreshJob` body (select →

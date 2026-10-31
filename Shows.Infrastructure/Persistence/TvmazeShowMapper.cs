@@ -113,6 +113,12 @@ public sealed class TvmazeShowMapper(
             return MapResult.Unchanged;
         }
 
+        // The status the show held BEFORE this map. Read here, before ApplyShowFields overwrites it,
+        // because the transition rules below need both sides and the entity is updated in place. This is
+        // also how the refresh jobs detect a transition (step 7.2) — the mapper never re-reads
+        // tvmaze_show.status_raw to work it out (source-table containment, step 8.1).
+        var previousStatus = show.Status;
+
         var showChanged = ApplyShowFields(show, payload.Show);
 
         // Keep the shadow FK to the source row equal to the readable copy (SPEC P3/P4 — a mapped row
@@ -133,6 +139,18 @@ public sealed class TvmazeShowMapper(
         // Recompute the cached columns over every episode of the show, watched state included. The
         // mapper READS episode_watch to do this and never writes it (SPEC P4).
         showChanged |= await RecomputeCachedColumnsAsync(show, cancellationToken).ConfigureAwait(false);
+
+        // Status-transition facts (ADR-038). Deliberately AFTER the flush above: an end is dated from the
+        // show's last aired episode, and episodes added by this very map are invisible to that query until
+        // they are persisted — the same ordering the cached columns need, for the same reason.
+        showChanged |= await RecordStatusTransitionsAsync(show, previousStatus, cancellationToken)
+            .ConfigureAwait(false);
+
+        // TVmaze's own "updated" instant, copied across the layer boundary so the UI can read it without
+        // touching the source table (SPEC P3/R11). Unconditional: it is a mirror of a source value, not a
+        // judgement, and a mirror that lags is worse than one that churns. Not counted as a change —
+        // source-row churn is not a mapped change (the same discipline as MapAkasAsync).
+        show.TvmazeUpdatedAt = FromUnixSeconds(payload.Show.ProviderUpdated);
 
         if (showChanged)
         {
@@ -760,6 +778,109 @@ public sealed class TvmazeShowMapper(
             show.Genres.Add(genre);
         }
     }
+
+    // ---- status-transition facts (ADR-038) ----
+
+    /// <summary>
+    /// Stamp the two transition dates the Updates tab reads. Both are set once per transition and never
+    /// re-stamped by an unrelated edit, which is what separates them from <see cref="TrackedShow.MappedAt"/>
+    /// (ADR-038).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Entering terminal</b> dates from the show's last aired episode, not from now. A series whose
+    /// finale aired in 2019 must read 2019 whether it arrived through the import, was mapped for the first
+    /// time today, or re-ended after a renewal — three paths, one rule, so the Updates tab does not show a
+    /// 2019 finale as "ended this week". A show with no dated episode at all falls back to now, and the
+    /// <c>is null</c> test below lets a later map replace that placeholder once EpisodeRefresh brings the
+    /// episodes: the backfill is not the only thing keeping the column honest.
+    /// </para>
+    /// <para>
+    /// <b>Leaving terminal</b> dates from now, because a renewal is an observation with no earlier event to
+    /// date it from. It requires the new status to be one that can still air, so a terminal-to-terminal
+    /// move (Ended → Canceled) is a cancellation, not a renewal, and a move to <c>Unknown</c> is a
+    /// vocabulary gap rather than news. A show whose previous status was <c>Unknown</c> — every new show —
+    /// can never satisfy this side, so <c>StatusRenewedAt</c> stays null for anything we have not actually
+    /// seen come back.
+    /// </para>
+    /// <para>
+    /// "Terminal" is <see cref="ShowStatusRules.NoMoreEpisodesExpected"/>, the one R12 definition —
+    /// Ended and Canceled. Canceled has never been observed from TVmaze in this library, but including it
+    /// costs nothing and a cancelled show is in fact finished, so it belongs in the Ended section.
+    /// </para>
+    /// </remarks>
+    private async Task<bool> RecordStatusTransitionsAsync(
+        TrackedShow show, ShowStatus previousStatus, CancellationToken cancellationToken)
+    {
+        var isTerminal = ShowStatusRules.NoMoreEpisodesExpected(show.Status);
+        var wasTerminal = ShowStatusRules.NoMoreEpisodesExpected(previousStatus);
+
+        if (!isTerminal)
+        {
+            // Leaving terminal into a status that can still air: a renewal. Unknown is excluded — that is
+            // a mapping gap, and R12 keeps it distinguishable from a renewal rather than reporting one.
+            // A show whose previous status was Unknown (every new show) can never reach here, so
+            // StatusRenewedAt stays null for anything we have not actually seen come back.
+            if (!wasTerminal || show.Status == ShowStatus.Unknown)
+            {
+                return false;
+            }
+
+            show.StatusRenewedAt = DateTimeOffset.UtcNow;
+            return true;
+        }
+
+        // Terminal. Date it from the last aired episode. A show that re-ends after a renewal therefore
+        // takes a fresh date — the old one describes an end that has since been undone — and a show whose
+        // episode list grows a later finale moves forward with it.
+        //
+        // The fallback chain is what keeps this idempotent. A real air date is evidence, so it always
+        // wins and re-mapping computes the same instant (no change). Only when the show has no dated
+        // episode at all does the stored value carry, and only when there is nothing stored does "now"
+        // get written once — otherwise every re-run of an episode-less terminal show would "change" it.
+        // That also lets a placeholder written before EpisodeRefresh found the episodes be replaced by the
+        // true date on the next map, so the migration backfill is not the only thing keeping this honest.
+        var lastAir = await LastAirInstantAsync(show.Id, cancellationToken).ConfigureAwait(false);
+        var desired = lastAir ?? show.StatusChangedAt ?? DateTimeOffset.UtcNow;
+        return SetStamp(show, nameof(show.StatusChangedAt), () => show.StatusChangedAt,
+            v => show.StatusChangedAt = v, desired);
+    }
+
+    // The show's most recent already-aired instant, or null when it has no dated episode. Computed rather
+    // than stored (SPEC P5) — episode.air_stamp is the canonical ordering key and end_date is TVmaze's
+    // claim, which is often absent or wrong; the episode rows are the evidence.
+    private async Task<DateTimeOffset?> LastAirInstantAsync(long showId, CancellationToken cancellationToken)
+    {
+        // Materialized then compared in-process: SQLite cannot ORDER BY a DateTimeOffset column and
+        // lexicographic ordering of the stored TEXT is unsafe across differing offsets (the standing
+        // EF-Core-on-SQLite constraint in this project). A show has at most a few hundred episodes.
+        var stamps = await context.Episodes
+            .Where(e => e.ShowId == showId && e.AirStamp != null)
+            .Select(e => e.AirStamp)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        // Compared as real instants, and null when the show has no dated episode — not MinValue, which a
+        // DefaultIfEmpty().Max() would silently hand back and which the caller would then store as a
+        // plausible-looking year 1.
+        DateTimeOffset? latest = null;
+        foreach (var stamp in stamps)
+        {
+            if (stamp is { } value && (latest is null || value > latest))
+            {
+                latest = value;
+            }
+        }
+
+        return latest;
+    }
+
+    // Unix seconds -> the UTC instant the mapped columns store. Null stays null: a source row with no
+    // 'updated' field is unknown, not epoch.
+    private static DateTimeOffset? FromUnixSeconds(long? unixSeconds) =>
+        unixSeconds is { } seconds
+            ? DateTimeOffset.FromUnixTimeSeconds(seconds).ToUniversalTime()
+            : null;
 
     // ---- cached columns (SPEC R5/R7 via the one Domain function) ----
 

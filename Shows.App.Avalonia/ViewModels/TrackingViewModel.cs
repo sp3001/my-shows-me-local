@@ -41,6 +41,12 @@ public sealed partial class TrackingViewModel : ObservableObject
     // "this week" boundary as the load (a filter must not shift which block an episode lands in).
     private DateOnly _upcomingToday;
 
+    // The Updates tab's raw feed (improvement 25), kept as loaded so a title filter can re-slice the four
+    // sections without re-hitting the database. The clock it was loaded with is kept for the same reason:
+    // a filter must not shift which rows fall inside the 60/30-day windows.
+    private UpdatesFeed _allUpdates = new([], [], [], []);
+    private DateTimeOffset _updatesNow;
+
     // UI memoization (Started list lag): the card VMs built for each category, kept across tab switches. On
     // the next load of a category the list still reads the data fresh (so it can tell whether anything
     // changed), but reuses a cached card VM whose freshly-read data signature is unchanged instead of
@@ -112,13 +118,42 @@ public sealed partial class TrackingViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsStartedView))]
     [NotifyPropertyChangedFor(nameof(IsSortable))]
+    [NotifyPropertyChangedFor(nameof(IsCategoryList))]
     private bool _isUpcoming;
 
     /// <summary>
-    /// True when the Started <b>tracker</b> tab is showing — Started but not the Upcoming view. The sort
-    /// control, the Waiting checkbox, and the Started list all key off this so they do not appear on Upcoming.
+    /// True when the Updates tab is selected (improvement 25). Like Upcoming it is a <b>view</b>, not a
+    /// fifth category (SPEC R1), so it drives which list control shows and suppresses the Started-only
+    /// toolbar rather than selecting a category.
     /// </summary>
-    public bool IsStartedView => IsStarted && !IsUpcoming;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsStartedView))]
+    [NotifyPropertyChangedFor(nameof(IsSortable))]
+    [NotifyPropertyChangedFor(nameof(IsCategoryList))]
+    private bool _isUpdates;
+
+    /// <summary>
+    /// The Updates tab's four sections (improvement 25): Ended, Renewed, Updated Lately, Recently Watched.
+    /// Each section is a heading over its rows and hides itself when empty, so a quiet stretch leaves no
+    /// bare heading behind. Bound to a dedicated list shown only when <see cref="IsUpdates"/>.
+    /// </summary>
+    public ObservableCollection<UpdatesSectionViewModel> UpdatesSections { get; } = [];
+
+    /// <summary>
+    /// True when the Started <b>tracker</b> tab is showing — Started but neither the Upcoming nor the
+    /// Updates view. The sort control, the Waiting checkbox, and the Started list all key off this so they
+    /// do not appear on either view.
+    /// </summary>
+    public bool IsStartedView => IsStarted && !IsUpcoming && !IsUpdates;
+
+    /// <summary>
+    /// True when the plain virtualized category list is the control to show — one of Later / Cancelled /
+    /// Finished and neither view tab. Upcoming needs no gate here because it borrows Started's category, so
+    /// <see cref="IsStarted"/> already hides the list; Updates borrows Finished's category and would
+    /// otherwise leave the empty category list realized underneath it (ADR-032: only one control is ever
+    /// non-empty).
+    /// </summary>
+    public bool IsCategoryList => !IsStarted && !IsUpcoming && !IsUpdates;
 
     /// <summary>
     /// Improvement 4: whether the "Waiting for new episodes" section is shown. Off by default — a user who
@@ -145,6 +180,7 @@ public sealed partial class TrackingViewModel : ObservableObject
         new(ShowCategory.Later, "Later"),
         new(ShowCategory.Cancelled, "Cancelled"),
         new(ShowCategory.Finished, "Finished"),
+        new(ShowCategory.Finished, "Updates", IsUpdates: true),
     ];
 
     /// <summary>The sort options offered for the Started list (improvement 2, extended by improvement 12).</summary>
@@ -160,7 +196,9 @@ public sealed partial class TrackingViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsStarted))]
     [NotifyPropertyChangedFor(nameof(IsStartedView))]
     [NotifyPropertyChangedFor(nameof(IsSortable))]
+    [NotifyPropertyChangedFor(nameof(IsCategoryList))]
     private ShowCategory _currentCategory;
+
 
     [ObservableProperty]
     private SortOption _selectedSortOption;
@@ -192,18 +230,21 @@ public sealed partial class TrackingViewModel : ObservableObject
     /// <summary>
     /// True when the current list offers the sort control: the Started tracker and the Later list. Later
     /// shares Started's sort (Name / Air date / Last aired); the last-aired key is fetched for it too
-    /// (see <see cref="LoadCoreAsync"/>). Cancelled/Finished and the Upcoming view stay unsorted.
+    /// (see <see cref="LoadCoreAsync"/>). Cancelled/Finished and the Upcoming and Updates views each have
+    /// a fixed order of their own and stay unsorted.
     /// </summary>
-    public bool IsSortable => (IsStarted && !IsUpcoming) || CurrentCategory == ShowCategory.Later;
+    public bool IsSortable => (IsStarted && !IsUpcoming && !IsUpdates) || CurrentCategory == ShowCategory.Later;
 
     /// <summary>True while a name filter is active, so the list can show a "no matches" message.</summary>
     public bool HasFilterText => !string.IsNullOrWhiteSpace(FilterText);
 
     partial void OnSelectedCategoryChanged(CategoryTab value)
     {
-        // The Upcoming tab shares Started's category but is a distinct view (improvement 4). Set the flag
-        // before loading so LoadCoreAsync routes to the upcoming read and the XAML shows the right control.
+        // The Upcoming and Updates tabs each share a category but are distinct views (improvements 4 and
+        // 25). Set both flags before loading so LoadCoreAsync routes to the right read and the XAML shows
+        // the right control.
         IsUpcoming = value.IsUpcoming;
+        IsUpdates = value.IsUpdates;
         _ = LoadAsync();
     }
 
@@ -246,6 +287,15 @@ public sealed partial class TrackingViewModel : ObservableObject
             if (IsUpcoming)
             {
                 await LoadUpcomingAsync().ConfigureAwait(false);
+                return;
+            }
+
+            // The Updates tab (improvement 25) is a fourth shape — four date-ordered sections, not category
+            // cards — so it has its own read and its own list. Handled here and returned early; the finally
+            // still clears IsBusy.
+            if (IsUpdates)
+            {
+                await LoadUpdatesAsync().ConfigureAwait(false);
                 return;
             }
 
@@ -370,6 +420,28 @@ public sealed partial class TrackingViewModel : ObservableObject
         ApplyFilterAndSort();
     }
 
+    // Loads the Updates tab (improvement 25): four date-ordered sections over the transition dates the
+    // mapper stamps (ADR-038). One read; the feed is kept raw so a title filter re-slices the sections
+    // without re-querying. The clock is captured so a filter re-slices against the same windows.
+    private async Task LoadUpdatesAsync()
+    {
+        UpdatesFeed feed;
+        await using (var scope = _scopeFactory.CreateAsyncScope())
+        {
+            var useCase = scope.ServiceProvider.GetRequiredService<GetUpdatesFeedUseCase>();
+            var now = DateTimeOffset.UtcNow;
+            feed = await useCase.ExecuteAsync(now, CancellationToken.None).ConfigureAwait(false);
+            _updatesNow = now;
+        }
+
+        // CurrentCategory = Finished so the Finished tab's highlight logic stays coherent, but IsUpdates is
+        // also true, so IsStartedView/IsSortable are false and IsCategoryList is false — the updates list
+        // control is the only one shown.
+        CurrentCategory = ShowCategory.Finished;
+        _allUpdates = feed;
+        ApplyFilterAndSort();
+    }
+
     // Rebuilds the visible collection from the loaded cards: filter by title (improvement 8), then sort
     // (improvement 2). Sort is Name for every category; Air date is only reachable from Started because
     // the control is hidden elsewhere, but the comparer is harmless regardless of category.
@@ -378,6 +450,57 @@ public sealed partial class TrackingViewModel : ObservableObject
         // The Upcoming view (improvement 4, regrouped by date) is a different shape — a flat episode list
         // grouped into date blocks. Filter by show title, then group the survivors into This Week / Other
         // blocks and day groups. The rows arrive soonest-first, so grouping is a single ordered pass.
+        // The Updates tab (improvement 25): filter each section by show title, then rebuild the four
+        // sections. The use case already ordered each one, so filtering preserves the order and an empty
+        // section drops out rather than rendering a bare heading.
+        if (IsUpdates)
+        {
+            var updatesFilter = FilterText?.Trim();
+
+            static bool Matches(TrackedShow show, string? filter)
+            {
+                if (string.IsNullOrEmpty(filter))
+                {
+                    return true;
+                }
+
+                return show.Title.Contains(filter, StringComparison.OrdinalIgnoreCase)
+                    || (show.TitleLocalized?.Contains(filter, StringComparison.OrdinalIgnoreCase) ?? false);
+            }
+
+            var sections = new List<UpdatesSectionViewModel>(4);
+            void Add(string caption, IEnumerable<UpdatesFeedRow> rows, bool showStatus)
+            {
+                var built = rows
+                    .Where(r => Matches(r.Show, updatesFilter))
+                    .Select(r => new UpdatesRowViewModel(r, showStatus))
+                    .ToList();
+                if (built.Count > 0)
+                {
+                    sections.Add(new UpdatesSectionViewModel(caption, built));
+                }
+            }
+
+            Add("Ended Shows", _allUpdates.Ended, showStatus: false);
+            Add("Renewed Shows", _allUpdates.Renewed, showStatus: true);
+            Add("Updated Lately", _allUpdates.Updated, showStatus: false);
+
+            var watched = _allUpdates.RecentlyWatched
+                .Where(r => Matches(r.Show, updatesFilter))
+                .Select(r => new UpdatesRowViewModel(r))
+                .ToList();
+            if (watched.Count > 0)
+            {
+                sections.Add(new UpdatesSectionViewModel("Recently Watched", watched));
+            }
+
+            StatusMessage = sections.Count == 0
+                ? $"Nothing in the last {GetUpdatesFeedUseCase.RecentWindowDays} days."
+                : null;
+            SyncTo(UpdatesSections, sections);
+            return;
+        }
+
         if (IsUpcoming)
         {
             IEnumerable<UpcomingEpisode> rows = _allUpcoming;
@@ -577,10 +700,12 @@ public sealed partial class TrackingViewModel : ObservableObject
 /// <summary>A category as the tab selector presents it: the enum value plus the label the user sees.</summary>
 /// <summary>
 /// A tab as the selector presents it: the category it shows, the label, and whether it is the Upcoming
-/// view (improvement 4). Upcoming is a view over Started, not a fifth category (SPEC R1), so it carries
-/// <see cref="IsUpcoming"/> = true and its <see cref="Category"/> is never used to query a category tab.
+/// view (improvement 4) or the Updates view (improvement 25). Neither is a fifth category (SPEC R1), so
+/// each carries its flag and its <see cref="Category"/> is never used to query a category tab — Upcoming
+/// borrows Started and Updates borrows Finished, purely so the tab has a value to render.
 /// </summary>
-public sealed record CategoryTab(ShowCategory Category, string Display, bool IsUpcoming = false);
+public sealed record CategoryTab(
+    ShowCategory Category, string Display, bool IsUpcoming = false, bool IsUpdates = false);
 
 /// <summary>The sort orders available on the Started list (improvement 2, extended by improvement 12).</summary>
 public enum ShowSortOrder

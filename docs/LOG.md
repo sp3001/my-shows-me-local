@@ -23,6 +23,163 @@ not verification for a data step — quote row counts.
 
 Newest entry first.
 
+### 2026-10-31 — improvement 25 — the Updates tab, and the status-transition dates it needed (ADR-038, migration 0011)
+
+**Request.** User, verbatim: "Add one more tabs - updates, next to Finished. It should use simiar layout
+as upcoming and contain following sections 1. Ended Shows - shows which updated status to Ended in past
+60 days. Ordered by status update date desc, display show name + date. 2. Renewed Shows - shows which
+updated from status Ended to any other status in past 60 days. Order by status update desc, display show
+name, current status, date 3. Updated Lately - shows updated from tvmaze past 30 days. Order by update
+date desc, display show name + update date 4. Recently watched - episodes watched in past 30 days. Order
+by watched at date desc, display show name, episode S#N# title, watched at date".
+
+Three follow-ups during the work changed the data model, not just the view: (a) "treat last status change
+as the updated at, and date an Ended show from its last episode air date"; (b) "drop `status_prev_id`,
+store the transition dates instead"; (c) "a cancelled show is ended too — and the first map of an Ended
+show must date the end from the last aired episode, not only the migration".
+
+**Files changed.**
+- `Shows.Domain/TrackedShow.cs` — three mapper-written columns after `MappedAt`: `StatusChangedAt`,
+  `StatusRenewedAt`, `TvmazeUpdatedAt`.
+- `Shows.Infrastructure/Persistence/Migrations/20261031170017_0011_ShowStatusTransitions.cs`
+  (+Designer, +ModelSnapshot) — three `AddColumn<DateTimeOffset>` (nullable TEXT) plus two hand-written
+  `migrationBuilder.Sql` backfills.
+- `Shows.Infrastructure/Persistence/TvmazeShowMapper.cs` — captures `previousStatus` before
+  `ApplyShowFields`, then after the mid-map cached-columns flush calls the new
+  `RecordStatusTransitionsAsync`; sets `TvmazeUpdatedAt` unconditionally from
+  `payload.Show.ProviderUpdated` via the new `FromUnixSeconds`. New helpers `LastAirInstantAsync` and
+  `SetStamp`.
+- `Shows.Application/Interfaces/IEpisodeRepository.cs` — `ListByIdsAsync`, `ListWatchesSinceAsync`.
+- `Shows.Application/Interfaces/ITrackedShowRepository.cs` — `ListActiveByIdsAsync`.
+- `Shows.Infrastructure/Persistence/Repositories/EpisodeRepository.cs` — both reads; the watch read is
+  `FromSqlRaw("SELECT * FROM episode_watch WHERE watched_at >= {0}")` with a **second-precision**
+  cutoff string, then sorted in memory.
+- `Shows.Infrastructure/Persistence/Repositories/TrackedShowRepository.cs` — `ListActiveByIdsAsync`.
+- `Shows.Application/UseCases/GetUpdatesFeedUseCase.cs` (new) — `UpdatesFeedRow`, `RecentlyWatchedRow`,
+  `UpdatesFeed`, `StatusWindowDays = 60`, `RecentWindowDays = 30`.
+- `Shows.Infrastructure/ShowsInfrastructureServiceCollectionExtensions.cs` — `AddScoped` for the use case.
+- `Shows.App.Avalonia/ViewModels/UpdatesSectionViewModels.cs` (new) — `UpdatesSectionViewModel`,
+  `UpdatesRowViewModel`.
+- `Shows.App.Avalonia/ViewModels/TrackingViewModel.cs` — `IsUpdates`, `UpdatesSections`, the fifth tab,
+  `IsStartedView`/`IsSortable`/`IsCategoryList` gates, `LoadUpdatesAsync`, the `ApplyFilterAndSort` branch.
+- `Shows.App.Avalonia/Views/TrackingView.axaml` — the ListBox `IsVisible` moved from
+  `{Binding IsStarted, Converter=InvertBool}` to `{Binding IsCategoryList}`; a fourth `ScrollViewer` for
+  the feed.
+- `Shows.App.Avalonia/Views/UpdatesSectionView.axaml{,.cs}`, `UpdatesRowView.axaml{,.cs}` (new).
+- `Shows.Tests/Integration/StatusTransitionStampTests.cs` (new, 12), `UpdatesFeedTests.cs` (new, 9),
+  `StatusTransitionBackfillTests.cs` (new, 9).
+- `Shows.Tests/Integration/ShowRefreshJobTests.cs`, `RefreshUpdatedJobTests.cs` — both
+  `TrackedShowRepositoryProxy` classes gained `ListActiveByIdsAsync` (the standing breakage when an
+  interface grows a member).
+- Docs: `SCHEMA.md` §2 (three columns + prose, v1.5 note), `SPEC.md` F4 + v1.6, `DECISIONS.md` ADR-038,
+  `STATE.md`, `user-issues.md` item 25, `ARCHITECTURE.md` untouched (no layer change).
+
+**Verification.**
+
+```
+dotnet build Shows.sln
+Build succeeded.
+    0 Warning(s)
+
+dotnet test Shows.Tests
+Passed!  - Failed: 0, Passed: 386, Skipped: 0, Total: 386 - Shows.Tests.dll (net8.0)
+
+dotnet test Shows.Tests --filter "FullyQualifiedName~StatusTransitionStampTests"
+Passed!  - Failed: 0, Passed: 12, Skipped: 0, Total: 12
+
+dotnet test Shows.Tests --filter "FullyQualifiedName~UpdatesFeedTests"
+Passed!  - Failed: 0, Passed: 9, Skipped: 0, Total: 9
+
+dotnet test Shows.Tests --filter "FullyQualifiedName~StatusTransitionBackfillTests"
+Passed!  - Failed: 0, Passed: 9, Skipped: 0, Total: 9
+```
+
+386 = the 356 baseline plus 30 new. The migration was scaffolded with
+`dotnet ef migrations add 0011_ShowStatusTransitions --project Shows.Infrastructure --startup-project Shows.Infrastructure`
+and the two `Sql` backfills added by hand underneath the generated `AddColumn`s.
+
+**The backfill, observed on the live `data/shows.db`** (0011 is already applied there — the app was
+started during this step, and `ShowsDatabaseMigrator` applied it):
+
+```
+select count(status_changed_at), count(status_renewed_at), count(tvmaze_updated_at) from tracked_show
+471     0     554
+```
+
+- `status_changed_at` filled on **471 of the 471** terminal active shows — every terminal show in this
+  library has at least one dated episode, so the fallback path never fired during the backfill. Range
+  `1986-09-27` to `2026-10-02`.
+- `status_renewed_at` **0**, by design: nothing observed a renewal before the mapper started observing
+  them.
+- `tvmaze_updated_at` filled on **554 of 554** — every tracked show has a source row with `provider_updated`.
+
+What the four sections will actually show, projected with the same windows the use case uses:
+
+```
+ended_60d  renewed_60d  updated_30d  watched_30d
+1          0            13           51
+```
+
+Ended holds exactly one show (`Bite Size Terror`, ended 2026-10-02). That is the honest consequence of
+dating an end from the last aired episode: 470 shows are terminal, but their finales are older than 60
+days. Renewed is empty until `StatusRecheck` observes a comeback. **User action: run `StatusRecheck` and
+`RefreshUpdated`** (Manage page) if the Renewed and Updated Lately sections look thinner than expected.
+
+**Deviations from the request, and why.**
+- The user said "updated status to **Ended**" and "from status **Ended** to any other". Implemented as
+  the terminal **set** `{Ended, Canceled}` — `ShowStatusRules.NoMoreEpisodesExpected`, the set SPEC R12
+  already owns. The user confirmed this in follow-up (c). A second definition of "terminal" would have
+  been a second thing to keep in sync, and a cancelled show is ended in every sense the view means.
+- "to any other status" is narrowed to *any airable* status. A move to `Unknown` is a vocabulary gap, not
+  a renewal, and listing it as renewed would report a mapping bug as good news (SPEC R12's fail-closed
+  rule).
+- The Ended section reads `status_changed_at`, which is the **last aired episode's** date rather than the
+  moment we learned it — the user's follow-up (a). This is what makes the section mean "ended recently"
+  rather than "we recently noticed an ending".
+- A show that ended, was renewed, and ended again appears in **Ended**, not Renewed. Its `StatusRenewedAt`
+  is recent but its current status is terminal, so calling it renewed now would be false.
+
+**New facts learned.**
+- TVmaze payloads carry **no** status-change field: 0 of the 554 stored shows have one. The three
+  candidates for "when did this change" were `mapped_at` (moves on any field edit, including our own
+  recomputes), `tvmaze_status_seen` (a global vocabulary log, not per-show) and
+  `tvmaze_show.provider_updated` (TVmaze's own timestamp — right for "updated lately", wrong for a
+  status change). None of them answers the question, which is why the dates had to be recorded.
+- `max()` over `air_stamp` TEXT is lexicographic, and it equals chronological **only** because every
+  stored value is the same 25-char `+00:00` form — verified: 19,503 rows, one distinct length. The
+  migration says so in a comment, because a future write with a different offset would silently break it.
+- `watched_at` is the opposite: variable 31/32/33-char lengths, because the app writes whatever
+  fractional precision `DateTimeOffset.UtcNow` happened to have. A `DateTimeOffset` parameter formatted
+  with 7 fraction digits therefore compares a whole-second row as **less than** the cutoff and drops it.
+  The cutoff is passed as a second-precision string so the boundary second is inclusive — pinned by
+  `A_watch_mark_exactly_on_the_cutoff_is_included`.
+- `UseSnakeCaseNamingConvention` applies to `__EFMigrationsHistory` too: the column is `migration_id`,
+  not `MigrationId`. Caught by a test that tried to delete its own history row.
+- EF Core 8's `DatabaseFacade.Migrate()` has **no** target-migration overload, so a "database at
+  migration N-1" fixture cannot be built by asking for it. The pattern that works: migrate fully, seed
+  while the model and schema agree, then roll the migration under test back by hand (delete its history
+  row, drop its columns) and migrate forward again. Seeding *after* the drop fails, because EF's model
+  still names the dropped columns.
+- `AsNoTracking()` on a nullable scalar projection is a **CS0452** — the element type is not a reference
+  type, so it does not satisfy the constraint. Scalar projections are not tracked anyway.
+
+**Two tests that were wrong, not the code.** (1) A show that re-ends with the same finale keeps that
+finale's date — I had asserted it should move, but the date is *derived*, so a recompute that agrees is
+the correct outcome, not a stale carry-over. (2) A second renewal legitimately refreshes
+`StatusRenewedAt`: the column means "the last time we saw it come back". Both assertions were corrected
+against the code, and the reasoning is in the test comments.
+
+**Also fixed while here.** The category ListBox in `TrackingView` was visible whenever `IsStarted` was
+false, which meant the Updates tab — borrowing `Finished` as its category so the tab strip stays
+consistent — realized an empty virtualized list underneath the feed. A new `IsCategoryList`
+(`!IsStarted && !IsUpcoming && !IsUpdates`) gates it, and `_isUpcoming`/`_currentCategory` each gained a
+`NotifyPropertyChangedFor(IsCategoryList)` so the flag actually re-evaluates.
+
+**Unblocked.** Improvement 25 is closed. Nothing else depends on the new columns, so Phase 8 (8.2/8.3,
+both postponed) can resume. The `status_changed_at` / `status_renewed_at` pair is the only place this
+repository records an observed transition, so any future "what changed recently" feature reads them
+rather than re-deriving from `mapped_at`.
+
 ### 2026-10-31 — UI improvements 22, 23, 24 — title-line chips, and episode rows that fill the details page
 
 **Request.** User, in six messages: (1) "Move country and tvmaze rating to title line, after user rating,

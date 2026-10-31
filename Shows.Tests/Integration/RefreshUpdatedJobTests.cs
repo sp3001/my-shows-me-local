@@ -245,6 +245,9 @@ public sealed class RefreshUpdatedJobTests : IDisposable
     {
         private readonly TrackedShowRepository _inner = new(db);
 
+        public Task<IReadOnlyList<TrackedShow>> ListActiveByIdsAsync(IReadOnlyList<long> ids, CancellationToken ct) =>
+            _inner.ListActiveByIdsAsync(ids, ct);
+
         public Task<IReadOnlyList<TrackedShow>> ListActiveAsync(CancellationToken ct) =>
             _inner.ListActiveAsync(ct);
 

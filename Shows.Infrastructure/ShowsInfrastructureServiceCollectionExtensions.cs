@@ -143,6 +143,9 @@ public static class ShowsInfrastructureServiceCollectionExtensions
         services.AddScoped<Shows.Application.UseCases.GetStartedCardsUseCase>();
         // The upcoming-episodes view (improvement 4): Started shows with unknown-or-future episodes, batched.
         services.AddScoped<Shows.Application.UseCases.GetUpcomingEpisodesUseCase>();
+        // The Updates tab (improvement 25): ended / renewed / provider-updated / recently-watched, over the
+        // transition dates the mapper stamps (ADR-038).
+        services.AddScoped<Shows.Application.UseCases.GetUpdatesFeedUseCase>();
         services.AddScoped<Shows.Application.UseCases.ChangeCategoryUseCase>();
         services.AddScoped<Shows.Application.UseCases.RecomputeProgressUseCase>();
         services.AddScoped<Shows.Application.UseCases.ToggleWatchedEpisodeUseCase>();

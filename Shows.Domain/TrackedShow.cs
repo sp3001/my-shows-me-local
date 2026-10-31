@@ -93,6 +93,41 @@ public sealed class TrackedShow
     /// <summary>When the mapper last wrote this row.</summary>
     public DateTimeOffset? MappedAt { get; set; }
 
+    // ---- Status-transition facts (ADR-038). Mapper-written, set once per transition. ----
+
+    /// <summary>
+    /// When the show <b>became terminal</b> (<see cref="ShowStatusRules.NoMoreEpisodesExpected"/>:
+    /// Ended or Canceled). Set to the last episode's air instant, not the moment we learned it — so a
+    /// series whose finale aired in 2019 reads 2019 whether it was imported, mapped for the first time
+    /// today, or re-ended after a renewal. Null for a show that has never been terminal.
+    /// </summary>
+    /// <remarks>
+    /// Distinct from <see cref="MappedAt"/>, which moves on <em>any</em> field change — a poster URL or a
+    /// description typo would otherwise read as a status change. The predicate that reads this is
+    /// "terminal AND this is recent", so the terminal check and this column must agree; both come from
+    /// <see cref="ShowStatusRules"/>.
+    /// </remarks>
+    public DateTimeOffset? StatusChangedAt { get; set; }
+
+    /// <summary>
+    /// When the show last moved <b>out of</b> a terminal status into one that can still air — a renewal.
+    /// Set to the moment we observed it, because unlike an end there is no past event to date it from.
+    /// </summary>
+    /// <remarks>
+    /// Null for a show that has simply always been non-terminal: at first map such a show has no prior
+    /// status, so there is no transition to record and inventing one would put every new airing show into
+    /// "Renewed". A move into <see cref="ShowStatus.Unknown"/> is also not a renewal — that is a
+    /// vocabulary gap, not a renewal, and R12 keeps it distinguishable.
+    /// </remarks>
+    public DateTimeOffset? StatusRenewedAt { get; set; }
+
+    /// <summary>
+    /// TVmaze's own <c>updated</c> instant for this show, copied across the layer boundary. The source
+    /// column <c>tvmaze_show.provider_updated</c> is unreadable outside the mapper (SPEC P3/R11), so this
+    /// is the mapped copy — the same relationship <see cref="Status"/> has to <c>status_raw</c>.
+    /// </summary>
+    public DateTimeOffset? TvmazeUpdatedAt { get; set; }
+
     // ---- Derived caches. Recomputed from episode x episode_watch, never authored. ----
 
     public int WatchedRegular { get; set; }

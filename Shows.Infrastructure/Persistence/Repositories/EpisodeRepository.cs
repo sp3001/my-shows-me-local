@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Shows.Application;
 using Shows.Domain;
@@ -234,6 +235,50 @@ public sealed class EpisodeRepository(ShowsDbContext context) : IEpisodeReposito
                         && (e.AirDate == null || e.AirDate > today))
             .AsNoTracking()
             .ToListAsync(cancellationToken);
+
+    // The Updates tab's recently-watched rows: the watch table names episode ids, and the row needs the
+    // episode's show/season/number/title. Ordering is left to the caller (SQLite cannot ORDER BY a
+    // DateTimeOffset), matching ListByShowIdAsync. Ids are globally unique (SPEC R13) and few — one per
+    // watched episode inside the window — so an IN list is fine.
+    public async Task<IReadOnlyList<Episode>> ListByIdsAsync(
+        IReadOnlyList<long> episodeIds, CancellationToken cancellationToken) =>
+        episodeIds.Count == 0
+            ? []
+            : await context.Episodes
+                .Where(e => episodeIds.Contains(e.Id))
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+
+    // The Updates tab's recently-watched section. Raw SQL because EF Core on SQLite cannot translate a
+    // DateTimeOffset comparison in a LINQ WHERE at all (the standing constraint in this project), and
+    // loading all ~11k watch rows to filter them in memory is the one read here that is not already
+    // bounded to a few hundred rows.
+    //
+    // The cutoff is passed as a SECOND-precision string, not a DateTimeOffset parameter, on purpose. The
+    // provider stores these instants as ISO TEXT with a variable-length fraction (31/32/33 characters in
+    // the live data) and a uniform +00:00 offset, so a TEXT comparison is chronological only when both
+    // sides have the same shape. A provider-formatted parameter carries 7 fraction digits, which would
+    // compare "...55+00:00" (a whole second, 25 chars) as LESS than "...55.0000000+00:00" and drop a mark
+    // sitting exactly on the cutoff. Truncating to whole seconds makes the boundary inclusive of the whole
+    // cutoff second, which is the granularity the section displays anyway.
+    //
+    // Ordering is NOT taken from SQL for the same shape reason: the rows are re-sorted on the real instant
+    // after materialization, which is the pattern every other date-ordered read here follows.
+    public async Task<IReadOnlyList<EpisodeWatch>> ListWatchesSinceAsync(
+        DateTimeOffset since, CancellationToken cancellationToken)
+    {
+        var cutoff = since.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss+00:00", CultureInfo.InvariantCulture);
+
+        var rows = await context.EpisodeWatches
+            .FromSqlRaw(
+                "SELECT * FROM episode_watch WHERE watched_at >= {0}",
+                cutoff)
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+
+        rows.Sort(static (a, b) => b.WatchedAt.CompareTo(a.WatchedAt));
+        return rows;
+    }
 
     public Task AddWatchAsync(EpisodeWatch watch, CancellationToken cancellationToken) =>
         context.EpisodeWatches.AddAsync(watch, cancellationToken).AsTask();

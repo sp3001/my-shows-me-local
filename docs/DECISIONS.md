@@ -1141,3 +1141,78 @@ it because the row already read "watched".
   `Zero_total_but_a_populated_catalog_marks_nothing` is the one that pins it.
 - `--promote` will not run again on this database, so the code fix is prevention for a future import,
   not the repair. The repair is the SQL script.
+
+## ADR-038 — Status transitions are dated, not remembered
+**Status:** accepted · 2026-10-31 · adds `tracked_show.status_changed_at` / `status_renewed_at` / `tvmaze_updated_at` (migration `0011`)
+
+**Problem** — the Updates tab (improvement 25, SPEC F4) asks four questions, three of which need a date
+the database did not have. "Which shows ended in the last 60 days", "which came back", and "which did
+TVmaze change" all presuppose a timestamp that nothing was writing.
+
+The probe: TVmaze payloads carry no status-change field at all — 0 of the 554 stored shows have one.
+The candidates that already existed were all wrong:
+
+- `tracked_show.mapped_at` moves on *any* field edit, including our own recomputes. A show whose poster
+  URL changed "ended" yesterday.
+- `tvmaze_status_seen` is a global vocabulary log — it records that the string `"Ended"` was seen, not
+  that *this* show became Ended.
+- `tvmaze_show.provider_updated` is TVmaze's own timestamp, which is the right answer for "updated
+  lately" and no answer at all for when a status changed.
+
+**Decision**
+- **Two dated columns, not a previous-status column.** `status_changed_at` is when the show became
+  terminal; `status_renewed_at` is when it left terminal into an airable status. The mapper captures the
+  status before it applies the payload and compares after, so the transition is observed rather than
+  inferred.
+- **Terminal is `{Ended, Canceled}`** — `ShowStatusRules.NoMoreEpisodesExpected`, the set SPEC R12
+  already owns. A cancelled show ended in every sense this view cares about. `Unknown` never qualifies:
+  a vocabulary gap is not evidence that a show finished, and it must not be read as a renewal either.
+- **An end is dated from the last aired episode, not from the observation.** A show whose finale aired in
+  2019 ended in 2019. Dating it from "now" would list a show the user added this afternoon as having
+  ended this week. With no dated episode, the mapper writes the observation time **once** and holds it,
+  then replaces that placeholder when `EpisodeRefresh` brings the finale — so the column self-heals
+  without the backfill having to be right.
+- **A first map of a non-terminal show records no renewal.** A new show has no prior status, so there is
+  no transition; stamping one would put every newly-added show into the Renewed section. The guard keys
+  on the show *being* terminal, not on `previous != Unknown` — a freshly-minted row starts at `Unknown`,
+  so a previous-status guard would have skipped exactly the first-map case that matters.
+- **`tvmaze_updated_at` is a mapped copy of `tvmaze_show.provider_updated`**, written unconditionally on
+  every map and not counted as a change. The UI may not read a source table (SPEC P3/R11), so the value
+  has to cross the boundary the same way `status_id` crosses from `status_raw`.
+- **The 0011 backfill dates ends from `max(episode.air_stamp)` and does not backfill renewals at all.**
+  Nothing observed a renewal before this change, so inventing dates would put the entire library in the
+  Renewed section.
+
+**Why dated columns and not `status_prev_id`** — the counter-example is Ended → Running → Ended. A
+previous-status column ends up holding `Running` after the second end, which both loses the fact that a
+renewal ever happened and makes the show look like it is about to renew. Two dated columns keep both
+facts, and the re-end legitimately re-dates the end while the renewal in between stays.
+
+**Alternatives rejected**
+- *Derive "ended recently" from `end_date`* — that is the show's own finale date, which for a show that
+  finished in 2019 is five years stale; it answers "when did it stop airing", not "when did we learn it
+  stopped", and the user asked for the latter.
+- *Derive it from `mapped_at`* — see above; it moves for reasons unrelated to status.
+- *Read `tvmaze_show.provider_updated` from the Updates read* — source-table containment (step 8.1). The
+  value must be a mapped copy, which is the same argument that made `status_id` a mapped copy of
+  `status_raw`.
+- *Store one "last status change" column and classify at read time* — it cannot express the
+  Ended → Running → Ended case either, because after the second end the single column says "ended" and
+  the renewal is gone.
+- *Backfill `status_renewed_at` from `mapped_at`* — every show would appear renewed.
+
+**Consequences**
+- The view is only as complete as the jobs that observe transitions. On a database that has never run
+  `StatusRecheck` since this change, Renewed is empty and Ended holds only what the backfill could date
+  from episodes. That is honest emptiness, not a bug — but it is invisible to a user who expects
+  history, so it is stated in `STATE.md` and in F4.
+- The mapper now writes three more columns, and `items_changed` must not count the
+  `tvmaze_updated_at` mirror. A refresh that re-maps every show would report every show as changed.
+- `RecordStatusTransitionsAsync` runs **after** the mid-map flush that persists episodes, so a first map
+  of an Ended show can date itself from the episodes it just inserted. Before that flush it would see an
+  empty episode set and write the placeholder.
+- The 0011 backfill's `max(air_stamp)` is lexicographic over TEXT. That equals chronological only
+  because every stored `air_stamp` is the same 25-char `+00:00` form — verified against the live
+  database (19,503 rows, one distinct length). If a future write introduces another offset, this
+  silently becomes wrong, which is why the migration says so out loud.
+

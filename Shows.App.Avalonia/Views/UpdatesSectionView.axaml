@@ -1,0 +1,19 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Shows.App.Avalonia.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:Class="Shows.App.Avalonia.Views.UpdatesSectionView"
+             x:DataType="vm:UpdatesSectionViewModel">
+
+    <!-- One section of the Updates tab (improvement 25): a heading over its rows. The whole section is
+         collapsed when it has no rows, so a stretch with nothing ending leaves no bare heading behind.
+         Rows render through the ViewLocator (UpdatesRowViewModel -> UpdatesRowView). -->
+    <StackPanel Spacing="2" Margin="0,14,0,4" IsVisible="{Binding HasRows}">
+        <TextBlock Text="{Binding Caption}" FontSize="15" FontWeight="Bold"
+                   Foreground="{DynamicResource TextPrimaryBrush}" />
+        <Separator Margin="0,2,0,4" />
+        <ItemsControl ItemsSource="{Binding Rows}" Margin="20,0,0,0" />
+    </StackPanel>
+</UserControl>

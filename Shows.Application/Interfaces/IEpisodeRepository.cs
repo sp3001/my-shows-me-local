@@ -119,6 +119,29 @@ public interface IEpisodeRepository
     Task<IReadOnlyList<Episode>> ListUpcomingByShowIdsAsync(
         IReadOnlyList<long> showIds, DateOnly today, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// The episodes with the given surrogate ids, for the Updates tab's recently-watched section — the
+    /// watch rows name the episode ids, and the row needs its show/season/number/title. Ordering is left
+    /// to the caller, matching <see cref="ListByShowIdAsync"/>.
+    /// </summary>
+    Task<IReadOnlyList<Episode>> ListByIdsAsync(
+        IReadOnlyList<long> episodeIds, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Watch rows marked on or after <paramref name="since"/>, newest first, for the Updates tab's
+    /// recently-watched section. A soft-deleted show's marks still come back here — the caller resolves
+    /// shows through an active-only read, so an untracked show's rows drop out rather than leaking.
+    /// </summary>
+    /// <remarks>
+    /// <b>Raw SQL, deliberately.</b> EF Core on SQLite cannot translate a <c>DateTimeOffset</c>
+    /// comparison in a LINQ <c>WHERE</c> at all (the standing constraint in this project), and filtering
+    /// 10k+ watch rows in memory on every tab open is the one read here that is not already bounded to a
+    /// few hundred rows. <c>watched_at</c> is stored UTC-normalized with a uniform <c>+00:00</c> offset,
+    /// so the TEXT comparison and the TEXT ordering are both chronological.
+    /// </remarks>
+    Task<IReadOnlyList<EpisodeWatch>> ListWatchesSinceAsync(
+        DateTimeOffset since, CancellationToken cancellationToken);
+
     Task AddWatchAsync(EpisodeWatch watch, CancellationToken cancellationToken);
 
     /// <summary>Returns whether a row was actually removed, so a double-unwatch is not silently a no-op success.</summary>

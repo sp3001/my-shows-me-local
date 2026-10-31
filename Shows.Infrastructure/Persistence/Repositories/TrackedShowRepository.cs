@@ -49,6 +49,19 @@ public sealed class TrackedShowRepository(ShowsDbContext context) : ITrackedShow
     public async Task<IReadOnlyList<TrackedShow>> ListActiveAsync(CancellationToken cancellationToken) =>
         await Active().OrderBy(s => s.Title).ToListAsync(cancellationToken);
 
+    // The Updates tab's recently-watched read starts from episode_watch rows, which survive untracking
+    // (ADR-024), so it must re-enter through Active() to drop a soft-deleted show's marks rather than
+    // listing a show the user removed. AsNoTracking: a display read.
+    public async Task<IReadOnlyList<TrackedShow>> ListActiveByIdsAsync(
+        IReadOnlyList<long> ids, CancellationToken cancellationToken) =>
+        ids.Count == 0
+            ? []
+            : await Active()
+                .Where(s => ids.Contains(s.Id))
+                .OrderBy(s => s.Title)
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+
     // The category-tab list read (issue 7). AsNoTracking: a tab can hold hundreds of shows and the list
     // only displays them — the card and every mutation re-fetch what they need through their own use
     // case. Tracking hundreds of TrackedShow+UserShow aggregates for a read-only list is pure overhead.

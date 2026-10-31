@@ -292,6 +292,7 @@ public sealed class ShowRefreshJobTests : IDisposable
         public Task<TrackedShow?> FindByTvmazeIdAsync(int id, CancellationToken ct) => _inner.FindByTvmazeIdAsync(id, ct);
         public Task<TrackedShow?> FindByTvmazeIdIncludingDeletedAsync(int id, CancellationToken ct) => _inner.FindByTvmazeIdIncludingDeletedAsync(id, ct);
         public Task<IReadOnlyList<TrackedShow>> ListActiveAsync(CancellationToken ct) => _inner.ListActiveAsync(ct);
+        public Task<IReadOnlyList<TrackedShow>> ListActiveByIdsAsync(IReadOnlyList<long> ids, CancellationToken ct) => _inner.ListActiveByIdsAsync(ids, ct);
         public Task<IReadOnlyList<TrackedShow>> ListActiveByCategoryAsync(ShowCategory c, CancellationToken ct) => _inner.ListActiveByCategoryAsync(c, ct);
         public Task<IReadOnlyList<TrackedShow>> ListIncludingUntrackedAsync(CancellationToken ct) => _inner.ListIncludingUntrackedAsync(ct);
         public Task<Dictionary<int, long?>> GetActiveTrackingByTvmazeIdsAsync(IReadOnlyList<int> ids, CancellationToken ct) => _inner.GetActiveTrackingByTvmazeIdsAsync(ids, ct);

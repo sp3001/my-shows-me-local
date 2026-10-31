@@ -77,7 +77,7 @@
              safe. -->
         <ListBox Grid.Row="3" ItemsSource="{Binding Shows}" Margin="12,0"
                  Padding="0,0,10,0" Background="Transparent" BorderThickness="0"
-                 IsVisible="{Binding IsStarted, Converter={StaticResource InvertBool}}">
+                 IsVisible="{Binding IsCategoryList}">
             <ListBox.Styles>
                 <Style Selector="ListBoxItem">
                     <Setter Property="Padding" Value="0" />
@@ -109,6 +109,14 @@
              ItemsControl (rows expand like the Started tracker's). -->
         <ScrollViewer Grid.Row="3" Margin="12,0" Padding="0,0,10,0" IsVisible="{Binding IsUpcoming}">
             <ItemsControl ItemsSource="{Binding UpcomingShows}" />
+        </ScrollViewer>
+
+        <!-- Updates view (improvement 25): a fourth list shown only when IsUpdates. Four date-ordered
+             sections — Ended Shows, Renewed Shows, Updated Lately, Recently Watched — each a heading over
+             its rows and each hidden when empty. A ScrollViewer + ItemsControl, the same shape as Upcoming:
+             the sections are few and short, so virtualization buys nothing here. -->
+        <ScrollViewer Grid.Row="3" Margin="12,0" Padding="0,0,10,0" IsVisible="{Binding IsUpdates}">
+            <ItemsControl ItemsSource="{Binding UpdatesSections}" />
         </ScrollViewer>
     </Grid>
 </UserControl>

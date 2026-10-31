@@ -1,0 +1,35 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Shows.App.Avalonia.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:Class="Shows.App.Avalonia.Views.UpdatesRowView"
+             x:DataType="vm:UpdatesRowViewModel">
+
+    <!-- One row in an Updates section (improvement 25): (show) (status chip) (episode) (date). The four
+         sections share this one row shape and differ only in which optional middle column they fill, so
+         they all scan the same way and the date is always the right-hand column. The status chip reuses
+         the .chip style the tracker cards use, so a status reads identically everywhere. The show title
+         stays clickable (hand cursor + tap) and is the larger, bolder part of the row; a thin underline
+         beneath each row separates the repeated shows. No purple — primary text colour, neutral rule. -->
+    <Border BorderBrush="{DynamicResource BorderStrongBrush}" BorderThickness="0,0,0,1" Padding="0,4">
+        <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+            <TextBlock Grid.Column="0" Text="{Binding ShowTitle}" Cursor="Hand"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"
+                       TextTrimming="CharacterEllipsis" PointerPressed="OnOpenDetails" />
+            <Border Grid.Column="1" Classes="chip" VerticalAlignment="Center"
+                    IsVisible="{Binding HasStatus}">
+                <TextBlock Classes="chip" Text="{Binding StatusText}" />
+            </Border>
+            <TextBlock Grid.Column="2" Text="{Binding EpisodeText}" FontSize="13"
+                       Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"
+                       TextTrimming="CharacterEllipsis" MaxWidth="320"
+                       IsVisible="{Binding HasEpisode}" />
+            <TextBlock Grid.Column="3" Text="{Binding DateText}" FontSize="13"
+                       Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"
+                       HorizontalAlignment="Right" />
+        </Grid>
+    </Border>
+</UserControl>
